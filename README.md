@@ -13,7 +13,7 @@ AI Workforce Search is a multi-tenant SaaS foundation for professional discovery
 - Configurable licensed people-search, email-finder, and email-verification provider adapters. No third-party provider is impersonated and no fake search results are generated.
 - Outreach templates, saved drafts, scheduled opt-in campaigns, Resend delivery, marketing-consent evidence, signed unsubscribe links, one-click unsubscribe headers, and send-time subscription quota checks.
 - Paystack recurring-plan checkout, webhook signature verification, and server-side subscription state updates.
-- Workspace settings, provider readiness indicators, and a platform-admin metrics dashboard.
+- Workspace settings, provider readiness indicators, a per-feature usage and quota dashboard, and a platform-admin metrics/workspace dashboard.
 - GitHub Actions type-check and production-build workflow.
 
 ## Stack
@@ -25,7 +25,7 @@ Next.js 14 App Router, React 18, TypeScript, Tailwind CSS, Supabase Auth/Postgre
 1. Install Node.js 20 or newer.
 2. Copy `.env.example` to `.env.local`.
 3. Create a Supabase project and configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY`.
-4. Apply every migration in order: `0001_initial_schema.sql` through `0011_month_scoped_email_usage.sql`.
+4. Apply every migration in order: `0001_initial_schema.sql` through `0012_workspace_usage_read_api.sql`.
 5. Configure the Supabase Auth email provider and redirect URL for your local/deployed app.
 6. Run `npm install`, `npm run typecheck`, and `npm run dev`.
 7. Open `http://localhost:3000`.
@@ -35,7 +35,7 @@ The public landing page can render without Supabase. Authenticated modules requi
 ## Provider configuration
 
 ### AI
-Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL`. The API key is read only by server routes. Monthly per-workspace quotas are enforced atomically in Postgres by `consume_feature_usage` (default limits: 20 free, 200 starter, 1,000 growth, 5,000 business units per feature).
+Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL`. The API key is read only by server routes. Monthly per-workspace quotas are enforced atomically in Postgres by `consume_feature_usage` (default limits: 20 free, 200 starter, 1,000 growth, 5,000 business units per feature). Members can see current usage and limits at `/dashboard/usage`.
 
 ### People search, email finder, and email verification
 
