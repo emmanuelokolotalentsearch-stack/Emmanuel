@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, Search, MapPin, BriefcaseBusiness, ExternalLink, BookmarkPlus, CheckCircle2 } from "lucide-react";
 
@@ -12,7 +12,7 @@ export default function JobSearchPage(){
  const [jobs,setJobs]=useState<Job[]>([]);const [saved,setSaved]=useState<Record<string,boolean>>({});const [usage,setUsage]=useState<{used:number;quota:number}|null>(null);
  const [busy,setBusy]=useState(false);const [error,setError]=useState("");
  useEffect(()=>{fetch("/api/workspaces").then(r=>r.json()).then(d=>{setWorkspaces(d.workspaces||[]);setWorkspaceId(d.workspaces?.[0]?.id||"");if(d.error)setError(d.error);}).catch(()=>setError("Could not load workspaces."));},[]);
- async function search(e:React.FormEvent<HTMLFormElement>){
+ async function search(e:FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setError("");setJobs([]);setSaved({});
   try{const r=await fetch("/api/job-search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,query,location,employment_type:employmentType})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Job search failed.");setJobs(d.jobs||[]);setUsage(d.usage||null);}
   catch(e){setError(e instanceof Error?e.message:"Job search failed.");}finally{setBusy(false);}
