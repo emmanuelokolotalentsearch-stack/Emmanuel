@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Users, Building2, Contact, BriefcaseBusiness, CreditCard, RefreshCw, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -23,7 +23,7 @@ export default function AdminPage(){
  },[]);
  useEffect(()=>{load(1,"");},[load]);
  const metrics=[["Registered users",stats?.users,Users],["Workspaces",stats?.workspaces,Building2],["Workspace memberships",stats?.memberships,Users],["Saved contacts",stats?.contacts,Contact],["Saved jobs",stats?.jobs,BriefcaseBusiness],["Active subscriptions",stats?.subscriptions_active,CreditCard],["Past-due subscriptions",stats?.subscriptions_past_due,CreditCard]] as const;
- function search(e:React.FormEvent){e.preventDefault();setAppliedQuery(query.trim());load(1,query.trim());}
+ function search(e:FormEvent){e.preventDefault();setAppliedQuery(query.trim());load(1,query.trim());}
  return <main className="min-h-screen px-5 py-8 sm:px-8"><div className="mx-auto max-w-7xl">
   <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500"><ArrowLeft size={16}/> Dashboard</Link>
   <div className="mt-6 flex items-end justify-between gap-3"><div><p className="text-xs font-extrabold uppercase tracking-widest text-violet-600">Platform operations</p><h1 className="mt-2 text-3xl font-black">Super admin</h1><p className="mt-2 text-sm text-slate-500">Global metrics and workspace-level operational status.</p></div><button onClick={()=>load(page,appliedQuery)} className="btn-outline"><RefreshCw size={14}/> Refresh</button></div>
