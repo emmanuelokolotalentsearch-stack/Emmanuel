@@ -47,7 +47,7 @@ The server-side people-search adapter sends a POST request to `PEOPLE_SEARCH_API
 ```
 It expects a JSON response containing `results` (or `data.results`) with fields such as `full_name`, `email`, `company`, `job_title`, `location`, `linkedin_url`, and `source`.
 
-The email finder adapter accepts first name, last name, and company domain and expects a JSON response with an email and confidence. The email verification adapter sends `{ "email": "person@example.com" }` and expects `status` or `result`, optionally `score` and `reason`. Configure provider URLs and API keys in server environment variables only; the URLs must use HTTPS.
+The email finder route accepts first name, last name, and company domain at `/api/email/find` and expects a JSON response with an email and confidence. The email verification adapter sends `{ "email": "person@example.com" }` and expects `status` or `result`, optionally `score` and `reason`. Configure provider URLs and API keys in server environment variables only; the URLs must use HTTPS.
 
 ### Email sending
 
@@ -68,7 +68,7 @@ The admin dashboard is available at `/dashboard/admin`. Do not expose the servic
 
 ## Scheduled operations
 
-`CRON_SECRET` is reserved for authenticated scheduled campaign/follow-up delivery. Configure a trusted scheduler only after the scheduled workflow is enabled. Do not expose it as a public client environment variable.
+`CRON_SECRET` protects `GET /api/cron/outreach`. Configure a trusted scheduler to call that endpoint with `Authorization: Bearer <CRON_SECRET>` (for example, every 5 minutes). Add `APP_BASE_URL` and `CRON_SECRET` as GitHub Actions repository secrets to use the included scheduled workflow. Do not expose the cron secret as a public client environment variable.
 
 ## Security and production notes
 
