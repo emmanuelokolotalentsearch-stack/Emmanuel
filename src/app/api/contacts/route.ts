@@ -20,6 +20,8 @@ async function context(workspaceId: string) {
 function normalizeContact(input: ContactInput) {
   const full_name = cleanText(input.full_name, 200);
   const email = cleanText(input.email, 320).toLowerCase();
+  const linkedinUrl = cleanText(input.linkedin_url, 500);
+  if (linkedinUrl) { try { const u = new URL(linkedinUrl); if (!["http:", "https:"].includes(u.protocol)) throw new Error(); } catch { throw new Error("Profile URL must be a valid HTTP or HTTPS link."); } }
   const stage = stages.includes(input.stage as any) ? input.stage as string : "new";
   const email_opt_in = input.email_opt_in === true;
   const email_consent_note = cleanText(input.email_consent_note, 1000);
@@ -32,7 +34,7 @@ function normalizeContact(input: ContactInput) {
     job_title: cleanText(input.job_title, 200) || null,
     source: cleanText(input.source, 100) || "manual",
     notes: cleanText(input.notes, 5000) || null, stage,
-    linkedin_url: cleanText(input.linkedin_url, 500) || null,
+    linkedin_url: linkedinUrl || null,
     location: cleanText(input.location, 200) || null,
     email_opt_in,
     email_opt_in_at: email_opt_in ? new Date().toISOString() : null,
