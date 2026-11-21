@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mail, Save, Send, Sparkles, FileText, RefreshCw } from "lucide-react";
 
@@ -75,14 +75,14 @@ export default function OutreachPage() {
     finally { setBusy(false); }
   }
 
-  async function saveDraft(e: React.FormEvent) {
+  async function saveDraft(e: FormEvent) {
     e.preventDefault();
     if (!activeContact?.email) { setError("Choose a contact with an email address."); return; }
     await submit("draft", { contact_id: contactId, subject, body });
     setSubject(""); setBody("");
   }
 
-  async function saveTemplate(e: React.FormEvent) {
+  async function saveTemplate(e: FormEvent) {
     e.preventDefault();
     if (!templateName.trim() || !body.trim()) { setError("Enter a template name and message body."); return; }
     const result = await submit("template", { name: templateName, subject, body });
