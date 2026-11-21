@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, BriefcaseBusiness, Plus, ExternalLink, Trash2, ClipboardCheck } from "lucide-react";
 
@@ -48,7 +48,7 @@ export default function JobsPage() {
     return () => { alive = false; };
   }, [load]);
 
-  async function addJob(e: React.FormEvent) {
+  async function addJob(e: FormEvent) {
     e.preventDefault(); setBusy(true); setError("");
     try {
       const r = await fetch("/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, workspace_id: workspaceId }) });
