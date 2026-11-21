@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     try {
       const resend = await fetch("https://api.resend.com/emails", {
         method: "POST",
-        headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+        headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json", "Idempotency-Key": "outreach-message-" + draft.id },
         body: JSON.stringify({
           from, to: [draft.recipient_email], subject: draft.subject, text: bodyText,
           html: "<div style=\\"font-family:Arial,sans-serif;white-space:pre-wrap\\">" + escapeHtml(draft.body) + "</div><p style=\\"font-size:12px;color:#666\\"><a href=\\"" + escapeHtml(unsubscribeUrl) + "\\">Unsubscribe</a></p>",
