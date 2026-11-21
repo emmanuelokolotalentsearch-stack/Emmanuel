@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 const stages = ["new", "contacted", "engaged", "qualified", "archived"] as const;
-type ContactInput = { full_name?: unknown; email?: unknown; company?: unknown; job_title?: unknown; source?: unknown; notes?: unknown; stage?: unknown; linkedin_url?: unknown; location?: unknown; email_opt_in?: unknown };
+type ContactInput = { full_name?: unknown; email?: unknown; company?: unknown; job_title?: unknown; source?: unknown; notes?: unknown; stage?: unknown; linkedin_url?: unknown; location?: unknown; email_opt_in?: unknown; email_consent_note?: unknown };
 
 function cleanText(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -21,14 +21,29 @@ function normalizeContact(input: ContactInput) {
   const full_name = cleanText(input.full_name, 200);
   const email = cleanText(input.email, 320).toLowerCase();
   const stage = stages.includes(input.stage as any) ? input.stage as string : "new";
+  const email_opt_in = input.email_opt_in === true;
+  const email_consent_note = cleanText(input.email_consent_note, 1000);
   if (!full_name) throw new Error("Every contact needs a name.");
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error(`Invalid email address for ${full_name}.`);
-  return { full_name, email: email || null, company: cleanText(input.company, 200) || null, job_title: cleanText(input.job_title, 200) || null, source: cleanText(input.source, 100) || "manual", notes: cleanText(input.notes, 5000) || null, stage, linkedin_url: cleanText(input.linkedin_url, 500) || null, location: cleanText(input.location, 200) || null, email_opt_in: input.email_opt_in === true };
+  if (email_opt_in && email_consent_note.length < 10) throw new Error("Record how and when this person agreed to receive marketing emails (at least 10 characters).");
+  return {
+    full_name, email: email || null,
+    company: cleanText(input.company, 200) || null,
+    job_title: cleanText(input.job_title, 200) || null,
+    source: cleanText(input.source, 100) || "manual",
+    notes: cleanText(input.notes, 5000) || null, stage,
+    linkedin_url: cleanText(input.linkedin_url, 500) || null,
+    location: cleanText(input.location, 200) || null,
+    email_opt_in,
+    email_opt_in_at: email_opt_in ? new Date().toISOString() : null,
+    email_consent_source: email_opt_in ? "workspace_user_attestation" : null,
+    email_consent_note: email_opt_in ? email_consent_note : null,
+    ...(email_opt_in ? { email_unsubscribed_at: null } : {})
+  };
 }
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const workspaceId = url.searchParams.get("workspace_id") || "";
+  const workspaceId = new URL(request.url).searchParams.get("workspace_id") || "";
   const ctx = await context(workspaceId);
   if ("error" in ctx) return ctx.error;
   const { data, error } = await ctx.supabase.from("contacts").select("*").eq("workspace_id", workspaceId).order("updated_at", { ascending: false }).limit(1000);
