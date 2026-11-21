@@ -68,9 +68,9 @@ export async function POST(request: Request) {
     const { data: draft } = await admin.from("outreach_messages").select("*").eq("id", body.message_id).eq("workspace_id", workspaceId).maybeSingle();
     if (!draft || draft.status !== "draft") return NextResponse.json({ error: "Draft not found or it has already been processed." }, { status: 409 });
     if (!draft.contact_id) return NextResponse.json({ error: "Draft is not linked to a CRM contact." }, { status: 400 });
-    const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_unsubscribed_at").eq("id", draft.contact_id).eq("workspace_id", workspaceId).maybeSingle();
+    const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_opt_in_at,email_consent_source,email_consent_note,email_unsubscribed_at").eq("id", draft.contact_id).eq("workspace_id", workspaceId).maybeSingle();
     if (!contact || contact.email !== draft.recipient_email) return NextResponse.json({ error: "Contact email changed. Review and create a fresh draft." }, { status: 409 });
-    if (!contact.email_opt_in || contact.email_unsubscribed_at) return NextResponse.json({ error: "This contact has not consented to marketing email or has unsubscribed. Sending is blocked." }, { status: 403 });
+    if (!contact.email_opt_in || !contact.email_opt_in_at || !contact.email_consent_source || String(contact.email_consent_note || "").trim().length < 10 || contact.email_unsubscribed_at) return NextResponse.json({ error: "This contact has no complete current marketing consent evidence or has unsubscribed. Sending is blocked." }, { status: 403 });
     let unsubscribeToken: string;
     try { unsubscribeToken = createUnsubscribeToken(workspaceId, contact.id); }
     catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Unsubscribe signing is not configured." }, { status: 503 }); }
