@@ -65,8 +65,10 @@ export async function PATCH(request: Request) {
   const ctx = await context(workspaceId);
   if ("error" in ctx) return ctx.error;
   if (!["owner","admin"].includes(ctx.role)) return NextResponse.json({ error: "Only workspace administrators can pause or cancel campaigns." }, { status: 403 });
-  if (typeof body.id !== "string" || !["paused","cancelled"].includes(body.status)) return NextResponse.json({ error: "Campaign id and paused/cancelled status are required." }, { status: 400 });
-  const { data, error } = await ctx.supabase.from("outreach_campaigns").update({ status: body.status, updated_at: new Date().toISOString() }).eq("id", body.id).eq("workspace_id", workspaceId).in("status", ["draft","scheduled","sending","paused"]).select("id,status").single();
+  if (typeof body.id !== "string" || !["paused","cancelled","scheduled"].includes(body.status)) return NextResponse.json({ error: "Campaign id and paused/cancelled/scheduled status are required." }, { status: 400 });
+  const patch: Record<string, unknown> = { status: body.status, updated_at: new Date().toISOString() };
+  if (body.status === "scheduled") patch.scheduled_for = new Date().toISOString();
+  const { data, error } = await ctx.supabase.from("outreach_campaigns").update(patch).eq("id", body.id).eq("workspace_id", workspaceId).in("status", ["draft","scheduled","sending","paused"]).select("id,status").single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ campaign: data });
 }
