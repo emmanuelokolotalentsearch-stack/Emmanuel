@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+function safeProfileUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try { const url = new URL(value.trim()); return ["http:", "https:"].includes(url.protocol) ? url.toString() : null; }
+  catch { return null; }
+}
+
 export async function POST(request: Request) {
   let body: any;
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON." }, { status: 400 }); }
@@ -44,7 +50,7 @@ export async function POST(request: Request) {
       company: typeof row.company === "string" ? row.company : row.company?.name || row.organization?.name || null,
       job_title: row.job_title || row.title || row.current_title || null,
       location: typeof row.location === "string" ? row.location : row.location?.name || row.city || null,
-      linkedin_url: row.linkedin_url || row.profile_url || row.url || null,
+      linkedin_url: safeProfileUrl(row.linkedin_url || row.profile_url || row.url),
       source: String(row.source || row.provider || "licensed_provider")
     })).filter((person: any) => person.full_name);
     return NextResponse.json({ people, count: people.length, usage: { used: quota.used, quota: quota.quota } });
