@@ -46,6 +46,12 @@ export async function GET(request: Request) {
           await admin.from("outreach_campaign_recipients").update({ status: "skipped", error: "No current email consent or email address.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
           skipped++; continue;
         }
+        let token: string;
+        try { token = createUnsubscribeToken(campaign.workspace_id, contact.id); }
+        catch (e) {
+          await admin.from("outreach_campaign_recipients").update({ status: "failed", error: e instanceof Error ? e.message : "Unsubscribe configuration missing.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
+          failed++; continue;
+        }
         const { data: quotaData, error: quotaError } = await admin.rpc("consume_service_feature_usage", {
           target_workspace: campaign.workspace_id, target_actor: campaign.created_by, feature_name: "campaign_send", usage_units: 1
         });
@@ -58,12 +64,6 @@ export async function GET(request: Request) {
           await admin.from("outreach_campaign_recipients").update({ status: "queued", error: "Monthly campaign-send quota reached.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
           await admin.from("outreach_campaigns").update({ status: "paused", updated_at: new Date().toISOString() }).eq("id", campaign.id);
           quotaBlocked = true; skipped++; break;
-        }
-        let token: string;
-        try { token = createUnsubscribeToken(campaign.workspace_id, contact.id); }
-        catch (e) {
-          await admin.from("outreach_campaign_recipients").update({ status: "failed", error: e instanceof Error ? e.message : "Unsubscribe configuration missing.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
-          failed++; continue;
         }
         const base = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
         const unsubscribeUrl = base.replace(/\/$/,"") + "/api/unsubscribe?token=" + encodeURIComponent(token);
