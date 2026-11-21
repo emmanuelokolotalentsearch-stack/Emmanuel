@@ -55,7 +55,7 @@ Configure a verified sender with Resend, then set `RESEND_API_KEY`, `EMAIL_FROM`
 
 ### Paystack subscriptions
 
-Create monthly plans in the Paystack Dashboard and configure their plan codes as `PAYSTACK_PLAN_STARTER_CODE`, `PAYSTACK_PLAN_GROWTH_CODE`, and `PAYSTACK_PLAN_BUSINESS_CODE`. Set `PAYSTACK_SECRET_KEY` and `PAYSTACK_WEBHOOK_SECRET`. Register `https://YOUR_DOMAIN/api/billing/webhook` as the Paystack webhook endpoint. Checkout and subscription activation are server-side; browser redirects alone do not activate a plan. Paystack plan billing is recurring according to the interval configured in Paystack.
+Create monthly plans in the Paystack Dashboard and configure their plan codes as `PAYSTACK_PLAN_STARTER_CODE`, `PAYSTACK_PLAN_GROWTH_CODE`, and `PAYSTACK_PLAN_BUSINESS_CODE`. Also set the matching `PAYSTACK_STARTER_AMOUNT_KOBO`, `PAYSTACK_GROWTH_AMOUNT_KOBO`, and `PAYSTACK_BUSINESS_AMOUNT_KOBO` values (in kobo; these should match the plan values). Set `PAYSTACK_SECRET_KEY` and `PAYSTACK_WEBHOOK_SECRET`. Register `https://YOUR_DOMAIN/api/billing/webhook` as the Paystack webhook endpoint. Checkout and subscription activation are server-side; browser redirects alone do not activate a plan. Paystack plan billing is recurring according to the interval configured in Paystack.
 
 ### Platform administrator
 
