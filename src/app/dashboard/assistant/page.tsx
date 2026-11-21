@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, BrainCircuit, Copy, Sparkles } from "lucide-react";
 
@@ -29,7 +29,7 @@ export default function AssistantPage() {
     }).catch(() => setError("Could not load workspaces."));
   }, []);
 
-  async function generate(e: React.FormEvent) {
+  async function generate(e: FormEvent) {
     e.preventDefault(); setBusy(true); setError(""); setOutput("");
     try {
       const response = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspace_id: workspaceId, task, input, context }) });
