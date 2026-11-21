@@ -29,12 +29,16 @@ export async function GET(request: Request) {
         const claim = await admin.from("outreach_campaigns").update({ status: "sending", updated_at: now }).eq("id", campaign.id).eq("status", "scheduled").select("id").maybeSingle();
         if (!claim.data) continue;
       }
-      const { data: recipients, error: recipientsError } = await admin.from("outreach_campaign_recipients").select("id,contact_id,status")
-        .eq("campaign_id", campaign.id).eq("status", "queued").limit(25);
-      if (recipientsError) { failed++; continue; }
-      for (const recipient of recipients || []) {
+      const staleBefore = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const [queuedResult, staleResult] = await Promise.all([
+        admin.from("outreach_campaign_recipients").select("id,contact_id,status").eq("campaign_id", campaign.id).eq("status", "queued").limit(25),
+        admin.from("outreach_campaign_recipients").select("id,contact_id,status").eq("campaign_id", campaign.id).eq("status", "sending").lt("updated_at", staleBefore).limit(25)
+      ]);
+      if (queuedResult.error || staleResult.error) { failed++; continue; }
+      const recipients = [...(queuedResult.data || []), ...(staleResult.data || [])].slice(0,25);
+      for (const recipient of recipients) {
         const claim = await admin.from("outreach_campaign_recipients").update({ status: "sending", updated_at: new Date().toISOString() })
-          .eq("id", recipient.id).eq("status", "queued").select("id").maybeSingle();
+          .eq("id", recipient.id).eq("status", recipient.status).select("id").maybeSingle();
         if (!claim.data) continue;
         processed++;
         const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_unsubscribed_at").eq("id", recipient.contact_id).eq("workspace_id", campaign.workspace_id).maybeSingle();
