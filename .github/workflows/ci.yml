@@ -4,14 +4,42 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workforce_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workforce_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install
-      - run: npm run typecheck
-      - run: npm run build
+      - name: Bootstrap Supabase auth schema for migration tests
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d workforce_test -v ON_ERROR_STOP=1 -f tests/supabase-bootstrap.sql
+      - name: Apply all database migrations
+        run: |
+          for migration in supabase/migrations/*.sql; do
+            echo "Applying $migration"
+            PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d workforce_test -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Test tenant isolation, role security, quotas, and admin checks
+        run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d workforce_test -v ON_ERROR_STOP=1 -f tests/supabase-rls.sql
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Type-check
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
