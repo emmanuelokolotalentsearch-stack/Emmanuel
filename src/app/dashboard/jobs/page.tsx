@@ -97,7 +97,7 @@ export default function JobsPage() {
 
   const role = workspaces.find(w => w.id === workspaceId)?.role;
   return <main className="min-h-screen px-5 py-8 sm:px-8"><div className="mx-auto max-w-6xl">
-    <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500"><ArrowLeft size={16}/> Dashboard</Link>
+    <Link href="/dashboard/job-search" className="btn-outline mb-4 inline-flex"><Search size={14}/> Search job listings</Link>\n    <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500"><ArrowLeft size={16}/> Dashboard</Link>
     <div className="mt-6 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-extrabold uppercase tracking-widest text-violet-600">Career pipeline</p><h1 className="mt-2 text-3xl font-black">Jobs & applications</h1><p className="mt-2 text-sm text-slate-500">Save job listings you are authorized to use and track each application.</p></div>
       {workspaces.length > 0 && <div className="flex gap-2"><select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={workspaceId} onChange={e => { setWorkspaceId(e.target.value); load(e.target.value).catch(err => setError(err.message)); }}>{workspaces.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select><button className="btn" onClick={() => setShowForm(v => !v)}><Plus size={16}/> Add job</button></div>}
     </div>
