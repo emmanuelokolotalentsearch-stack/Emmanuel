@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const pageSize = 1000;
     for (let offset = 0; offset < 50000; offset += pageSize) {
       const { data, error } = await supabase.from(table).select("*")
-        .eq("workspace_id", workspaceId).order("created_at", { ascending: true })
+        .eq("workspace_id", workspaceId).order(table === "workspace_settings" ? "updated_at" : "created_at", { ascending: true })
         .range(offset, offset + pageSize - 1);
       if (error) return NextResponse.json({ error: "Export failed for " + table + ": " + error.message }, { status: 500 });
       rows.push(...(data || []));
