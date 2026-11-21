@@ -6,7 +6,7 @@ This checklist distinguishes repository code from external services that still n
 
 - [ ] Create a non-production Supabase project for initial validation.
 - [ ] Add the project URL, anon key, and server-only service-role key to local/deployment environment variables.
-- [ ] Apply migrations 0001 through 0012 in lexical order.
+- [ ] Apply migrations 0001 through 0013 in lexical order.
 - [ ] Configure Auth email confirmation, SMTP/email delivery, allowed redirect URLs, and the production site URL.
 - [ ] Register two test users and create two separate workspaces.
 - [ ] Confirm a user cannot read the other workspace's contacts, jobs, applications, activities, campaigns, settings, or usage rows.
@@ -28,10 +28,10 @@ This checklist distinguishes repository code from external services that still n
 
 ## 3. Licensed data providers
 
-- [ ] Connect a provider whose licence and terms authorize the intended people-search use case.
+- [ ] Connect providers whose licences and terms authorize the intended people-search and job-search use cases.
 - [ ] Map its response into the documented results/data.results contract.
 - [ ] Test empty results, provider errors, timeouts, rate limits, malformed responses, and HTTPS enforcement.
-- [ ] Test email finder and verification adapters separately.
+- [ ] Test job-search, email-finder, and email-verification adapters separately.
 - [ ] Confirm saving search results never sets email marketing consent.
 - [ ] Confirm no restricted-platform scraping, access-control bypass, or unauthorized bulk export is enabled.
 
