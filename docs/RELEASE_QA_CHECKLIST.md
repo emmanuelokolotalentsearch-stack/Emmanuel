@@ -6,7 +6,7 @@ This checklist distinguishes repository code from external services that still n
 
 - [ ] Create a non-production Supabase project for initial validation.
 - [ ] Add the project URL, anon key, and server-only service-role key to local/deployment environment variables.
-- [ ] Apply migrations 0001 through 0011 in lexical order.
+- [ ] Apply migrations 0001 through 0012 in lexical order.
 - [ ] Configure Auth email confirmation, SMTP/email delivery, allowed redirect URLs, and the production site URL.
 - [ ] Register two test users and create two separate workspaces.
 - [ ] Confirm a user cannot read the other workspace's contacts, jobs, applications, activities, campaigns, settings, or usage rows.
@@ -40,7 +40,7 @@ This checklist distinguishes repository code from external services that still n
 - [ ] Set OPENAI_API_KEY and a supported OPENAI_MODEL as server-side variables only.
 - [ ] Test assistant, profile analysis, outreach drafting, and job-match tasks with synthetic or authorized data.
 - [ ] Confirm prompts do not infer protected characteristics or make automated hiring recommendations.
-- [ ] Confirm usage increments atomically, free limits are enforced, paid limits require an active subscription, and provider failures are observable.
+- [ ] Confirm usage increments atomically, free limits are enforced, paid limits require an active subscription, and provider failures are observable.\n- [ ] Confirm `/dashboard/usage` displays counts consistent with the usage counters and feature quotas.
 - [ ] Review output quality and hallucination risk with human reviewers before real recruiting use.
 
 ## 5. Email and campaigns
