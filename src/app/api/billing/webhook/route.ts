@@ -77,6 +77,16 @@ export async function POST(request: Request) {
     if (subscriptionCode) await admin.from("subscriptions").update({ status: "past_due", updated_at: new Date().toISOString() }).eq("provider_subscription_code", subscriptionCode);
   }
 
+  if (event.event === "invoice.update" && (data.paid === true || data.status === "success")) {
+    const code = data.subscription?.subscription_code || data.subscription_code;
+    if (code) await admin.from("subscriptions").update({ status: "active", current_period_end: data.subscription?.next_payment_date || null, updated_at: new Date().toISOString() }).eq("provider_subscription_code", code);
+  }
+
+  if (event.event === "subscription.not_renew") {
+    const code = data.subscription_code;
+    if (code) await admin.from("subscriptions").update({ cancel_at_period_end: true, updated_at: new Date().toISOString() }).eq("provider_subscription_code", code);
+  }
+
   if (event.event === "subscription.disable") {
     const code = data.subscription_code;
     if (code) await admin.from("subscriptions").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("provider_subscription_code", code);
