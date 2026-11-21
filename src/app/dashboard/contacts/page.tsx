@@ -9,12 +9,12 @@ type Contact = {
   id: string; full_name: string; email: string | null; company: string | null;
   job_title: string | null; source: string | null; notes: string | null;
   stage: "new" | "contacted" | "engaged" | "qualified" | "archived";
-  location?: string | null; linkedin_url?: string | null; email_opt_in?: boolean;
+  location?: string | null; linkedin_url?: string | null; email_opt_in?: boolean; email_consent_note?: string | null;
   created_at: string; updated_at: string;
 };
 
 const stages = ["new", "contacted", "engaged", "qualified", "archived"] as const;
-const blank = { full_name: "", email: "", company: "", job_title: "", location: "", linkedin_url: "", source: "manual", notes: "", stage: "new" as const, email_opt_in: false };
+const blank = { full_name: "", email: "", company: "", job_title: "", location: "", linkedin_url: "", source: "manual", notes: "", stage: "new" as const, email_opt_in: false, email_consent_note: "" };
 
 function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
@@ -238,7 +238,7 @@ export default function ContactsPage() {
           <label className="text-xs font-bold text-slate-600">Relationship stage<select className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal capitalize" value={form.stage} onChange={e => setForm({...form,stage:e.target.value as any})}>{stages.map(s=><option className="capitalize" key={s} value={s}>{s}</option>)}</select></label>
           <label className="text-xs font-bold text-slate-600">Source<input className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal" value={form.source} onChange={e => setForm({...form,source:e.target.value})}/></label>
           <label className="sm:col-span-2 text-xs font-bold text-slate-600">Notes<textarea rows={3} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal" value={form.notes} onChange={e => setForm({...form,notes:e.target.value})}/></label>
-          <label className="sm:col-span-2 flex items-start gap-2 text-xs leading-5 text-slate-600"><input type="checkbox" className="mt-1" checked={form.email_opt_in} onChange={e => setForm({...form,email_opt_in:e.target.checked})}/> This person has expressly agreed to receive marketing emails. Do not tick unless you have recorded valid consent.</label>
+          <label className="sm:col-span-2 flex items-start gap-2 text-xs leading-5 text-slate-600"><input type="checkbox" className="mt-1" checked={form.email_opt_in} onChange={e => setForm({...form,email_opt_in:e.target.checked})}/> This person has expressly agreed to receive marketing emails. Do not tick unless you have recorded valid consent.</label>{form.email_opt_in && <label className="sm:col-span-2 text-xs font-bold text-slate-600">Consent evidence *<textarea required minLength={10} maxLength={1000} rows={2} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal" placeholder="Record when and how consent was obtained, e.g. 21 Nov 2026 — opted in via our website signup form." value={form.email_consent_note} onChange={e => setForm({...form,email_consent_note:e.target.value})}/></label>}
           <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" className="btn-outline" onClick={() => setModal(false)}>Cancel</button><button className="btn" disabled={busy}>{busy ? "Saving…" : editing ? "Save changes" : "Add contact"}</button></div>
         </form>
       </section>
