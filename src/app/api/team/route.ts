@@ -40,7 +40,6 @@ export async function POST(request: Request) {
   if (!["admin", "member", "viewer"].includes(role as string)) return NextResponse.json({ error: "Choose admin, member, or viewer." }, { status: 400 });
   if (ctx.role !== "owner" && role === "admin") return NextResponse.json({ error: "Only the workspace owner can invite administrators." }, { status: 403 });
 
-  const { data: existingMember } = await ctx.admin.from("workspace_members").select("user_id").eq("workspace_id", workspaceId).maybeSingle().then(async first => first);
   // Resolve existing accounts before sending a new invitation so registered users can join
   // another workspace without creating duplicate accounts.
   let userId: string | null = null;
