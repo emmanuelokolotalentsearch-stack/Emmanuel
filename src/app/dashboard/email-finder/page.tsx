@@ -9,10 +9,20 @@ type Contact={id:string;full_name:string;email:string|null;company:string|null;j
 export default function EmailFinderPage(){
  const [workspaces,setWorkspaces]=useState<Workspace[]>([]);const [workspaceId,setWorkspaceId]=useState("");const [contacts,setContacts]=useState<Contact[]>([]);
  const [contactId,setContactId]=useState("");const [firstName,setFirstName]=useState("");const [lastName,setLastName]=useState("");const [domain,setDomain]=useState("");
- const [found,setFound]=useState("");const [confidence,setConfidence]=useState<number|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [notice,setNotice]=useState("");
+ const [found,setFound]=useState("");const [confidence,setConfidence]=useState<number|null>(null);const [verification,setVerification]=useState("");const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [notice,setNotice]=useState("");
  async function loadContacts(id:string){const r=await fetch("/api/contacts?workspace_id="+encodeURIComponent(id)),d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load contacts.");setContacts(d.contacts||[]);}
  useEffect(()=>{(async()=>{try{const r=await fetch("/api/workspaces"),d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load workspaces.");setWorkspaces(d.workspaces||[]);const id=d.workspaces?.[0]?.id||"";setWorkspaceId(id);if(id)await loadContacts(id);}catch(e){setError(e instanceof Error?e.message:"Could not load workspace.");}})();},[]);
- async function find(e:FormEvent){e.preventDefault();setBusy(true);setError("");setFound("");setNotice("");try{const r=await fetch("/api/email/find",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,first_name:firstName,last_name:lastName,domain})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Email lookup failed.");setFound(d.email);setConfidence(d.confidence);}catch(e){setError(e instanceof Error?e.message:"Email lookup failed.");}finally{setBusy(false);}}
+ async function find(e:FormEvent){e.preventDefault();setBusy(true);setError("");setFound("");setVerification("");setNotice("");try{const r=await fetch("/api/email/find",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,first_name:firstName,last_name:lastName,domain})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Email lookup failed.");setFound(d.email);setConfidence(d.confidence);}catch(e){setError(e instanceof Error?e.message:"Email lookup failed.");}finally{setBusy(false);}}
+ async function verify(){
+  if(!found)return;
+  setBusy(true);setError("");setVerification("Checking email address…");
+  try{
+   const r=await fetch("/api/email/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,email:found})});
+   const d=await r.json();if(!r.ok)throw new Error(d.error||"Verification failed.");
+   setVerification("Verification result: "+d.status+(d.score!==null&&d.score!==undefined?" · score "+d.score:"")+(d.reason?" · "+d.reason:""));
+  }catch(e){setVerification("");setError(e instanceof Error?e.message:"Verification failed.");}
+  finally{setBusy(false);}
+ }
  async function save(){const c=contacts.find(x=>x.id===contactId);if(!c||!found)return;setBusy(true);setError("");try{const r=await fetch("/api/contacts",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,id:c.id,full_name:c.full_name,email:found,company:c.company,job_title:c.job_title,location:c.location,linkedin_url:c.linkedin_url,source:c.source,notes:c.notes,stage:c.stage,email_opt_in:c.email_opt_in,email_consent_note:c.email_consent_note||""})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not update contact.");await loadContacts(workspaceId);setNotice("Email added to "+c.full_name+". Marketing consent was not changed.");}catch(e){setError(e instanceof Error?e.message:"Could not save email.");}finally{setBusy(false);}}
  const selected=contacts.find(c=>c.id===contactId);
  return <main className="min-h-screen px-5 py-8 sm:px-8"><div className="mx-auto max-w-4xl"><Link href="/dashboard/search" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500"><ArrowLeft size={16}/> People search</Link><div className="mt-6"><p className="text-xs font-extrabold uppercase tracking-widest text-violet-600">Contact enrichment</p><h1 className="mt-2 text-3xl font-black">Email finder</h1><p className="mt-2 text-sm text-slate-500">Find a business email using a licensed provider and company domain.</p></div>
@@ -26,7 +36,7 @@ export default function EmailFinderPage(){
  {found&&<section className="card mt-5 p-6"><div className="flex items-center gap-3"><span className="rounded-xl bg-emerald-50 p-3 text-emerald-700"><AtSign size={20}/></span><div><p className="text-xs font-bold text-slate-400">Provider result</p><p className="mt-1 text-lg font-black">{found}</p><p className="mt-1 text-xs text-slate-500">Confidence: {confidence===null?"Not supplied":confidence}</p></div></div>
  <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs leading-5 text-amber-900">Finding an address does not verify deliverability or grant permission to send marketing email. Verify it and obtain consent separately.</p>
  {contactId&&selected&&<button onClick={save} disabled={busy} className="btn mt-4"><Save size={15}/> Save to {selected.full_name}</button>}
- <Link href="/dashboard/search" className="btn-outline ml-2 mt-4"><MailCheck size={14}/> Verify email</Link>
+ <button type="button" disabled={busy} onClick={verify} className="btn-outline ml-2 mt-4"><MailCheck size={14}/> Verify email</button>{verification&&<p role="status" className="mt-3 text-sm text-slate-600">{verification}</p>}
  </section>}
  </div></main>;
 }
