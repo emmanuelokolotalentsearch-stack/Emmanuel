@@ -144,7 +144,7 @@ BEGIN
 END $$;
 
 DO $$
-DECLARE usage_row record;
+DECLARE usage_row record; i integer;
 BEGIN
   FOR i IN 1..21 LOOP
     SELECT * INTO usage_row FROM public.consume_feature_usage(current_setting('qa.workspace_b')::uuid,'qa_feature',1);
