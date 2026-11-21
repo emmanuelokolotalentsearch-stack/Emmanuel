@@ -8,10 +8,10 @@ AI Workforce Search is a multi-tenant SaaS foundation for professional discovery
 - Multi-tenant workspaces, membership roles, PostgreSQL Row Level Security, and workspace creation.
 - Contact CRM with create/edit/delete, search, CSV import/export, consent fields, and activity logging.
 - Team member invitations, role changes, and removals (Supabase Admin API and service-role key required).
-- Job records and application-stage tracking.
-- AI assistant, profile analysis, and outreach drafting through a server-side OpenAI API route, with atomic monthly usage quotas.
+- Manually saved job records, evidence-based AI job matching, and application-stage tracking. Automated job-board discovery remains provider-dependent.
+- AI assistant, profile analysis, outreach drafting, and evidence-based job matching through a server-side OpenAI API route, with atomic monthly usage quotas.
 - Configurable licensed people-search, email-finder, and email-verification provider adapters. No third-party provider is impersonated and no fake search results are generated.
-- Outreach templates, saved drafts, Resend delivery, marketing-consent checks, signed unsubscribe links, and one-click unsubscribe headers.
+- Outreach templates, saved drafts, scheduled opt-in campaigns, Resend delivery, marketing-consent evidence, signed unsubscribe links, one-click unsubscribe headers, and send-time subscription quota checks.
 - Paystack recurring-plan checkout, webhook signature verification, and server-side subscription state updates.
 - Workspace settings, provider readiness indicators, and a platform-admin metrics dashboard.
 - GitHub Actions type-check and production-build workflow.
@@ -25,7 +25,7 @@ Next.js 14 App Router, React 18, TypeScript, Tailwind CSS, Supabase Auth/Postgre
 1. Install Node.js 20 or newer.
 2. Copy `.env.example` to `.env.local`.
 3. Create a Supabase project and configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY`.
-4. Apply every migration in order: `0001_initial_schema.sql` through `0008_rls_policy_tightening.sql`.
+4. Apply every migration in order: `0001_initial_schema.sql` through `0009_email_usage_limits.sql`.
 5. Configure the Supabase Auth email provider and redirect URL for your local/deployed app.
 6. Run `npm install`, `npm run typecheck`, and `npm run dev`.
 7. Open `http://localhost:3000`.
@@ -51,9 +51,9 @@ The email finder route accepts first name, last name, and company domain at `/ap
 
 ### Email sending
 
-Configure a verified sender with Resend, then set `RESEND_API_KEY`, `EMAIL_FROM`, and a random `UNSUBSCRIBE_SECRET` of at least 32 characters. The CRM defaults email marketing consent to false. Sending is blocked unless explicit opt-in is recorded and the contact has not unsubscribed. Drafts are human-reviewed; CSV import and saving a profile never imply consent.
+Configure a verified sender with Resend, then set `RESEND_API_KEY`, `EMAIL_FROM`, and a random `UNSUBSCRIBE_SECRET` of at least 32 characters. The CRM defaults email marketing consent to false. Turning it on requires a consent-evidence note; sending is blocked unless consent is recorded and the contact has not unsubscribed. Drafts are human-reviewed; CSV import and saving a profile never imply consent. Direct and scheduled delivery use atomic monthly plan quotas. The current default email quota is 20 free, 200 starter, 1,000 growth, or 5,000 business sends per workspace per month.
 
-### Paystack subscriptions
+### Jobs and applications\n\nJobs can be added from a user-provided or otherwise authorized listing. Automated job-board discovery is not enabled until a licensed feed is connected. The AI job-matching tool compares only user-supplied job requirements and candidate evidence, identifies evidence gaps, and suggests structured interview questions; it does not rank candidates or make hiring decisions.\n\n### Paystack subscriptions
 
 Create monthly plans in the Paystack Dashboard and configure their plan codes as `PAYSTACK_PLAN_STARTER_CODE`, `PAYSTACK_PLAN_GROWTH_CODE`, and `PAYSTACK_PLAN_BUSINESS_CODE`. Also set the matching `PAYSTACK_STARTER_AMOUNT_KOBO`, `PAYSTACK_GROWTH_AMOUNT_KOBO`, and `PAYSTACK_BUSINESS_AMOUNT_KOBO` values (in kobo; these should match the plan values). Set `PAYSTACK_SECRET_KEY` for API calls and legacy webhook verification. Set `PAYSTACK_WEBHOOK_SECRET` to the signing secret beginning with `whsec_` for modern `Paystack-Signature` header verification. The modern signature includes a signed timestamp and HMAC SHA-512 over `timestamp.rawBody`; requests outside the 5-minute window are rejected. The deprecated `X-Paystack-Signature` is verified using `PAYSTACK_SECRET_KEY`. Register `https://YOUR_DOMAIN/api/billing/webhook` as the Paystack webhook endpoint. Checkout and subscription activation are server-side; browser redirects alone do not activate a plan. Paystack plan billing is recurring according to the interval configured in Paystack.
 
