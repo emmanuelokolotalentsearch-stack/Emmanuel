@@ -6,7 +6,7 @@ import { Activity, ArrowUpRight, BrainCircuit, BriefcaseBusiness, FileSearch, La
 const nav = [
   ["Overview","/dashboard",LayoutDashboard],["People search","/dashboard/search",Search],["Email finder","/dashboard/email-finder",AtSign],["Contacts","/dashboard/contacts",Users],
   ["Outreach","/dashboard/outreach",Mail],["Campaigns","/dashboard/campaigns",CalendarClock],["AI assistant","/dashboard/assistant",BrainCircuit],["Jobs & careers","/dashboard/jobs",BriefcaseBusiness],
-  ["Team","/dashboard/team",UserCog],["Billing","/dashboard/billing",CreditCard]
+  ["Team","/dashboard/team",UserCog],["Usage","/dashboard/usage",Activity],["Billing","/dashboard/billing",CreditCard]
 ] as const;
 
 export default async function Dashboard() {
