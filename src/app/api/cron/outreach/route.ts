@@ -53,7 +53,7 @@ export async function GET(request: Request) {
           failed++; continue;
         }
         const { data: quotaData, error: quotaError } = await admin.rpc("consume_service_feature_usage", {
-          target_workspace: campaign.workspace_id, target_actor: campaign.created_by, feature_name: "campaign_send", usage_units: 1
+          target_workspace: campaign.workspace_id, target_actor: campaign.created_by, feature_name: "campaign_send", usage_units: 1, request_key: "campaign-recipient:" + recipient.id
         });
         if (quotaError) {
           await admin.from("outreach_campaign_recipients").update({ status: "queued", error: "Usage guard unavailable; retry after migration 0009 is applied.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
