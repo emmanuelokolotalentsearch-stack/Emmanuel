@@ -10,7 +10,10 @@ function authorized(request: Request) {
   const a = Buffer.from(secret), b = Buffer.from(received);
   return a.length === b.length && timingSafeEqual(a,b);
 }
-function escapeHtml(value: string) { return value.replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch]!)); }
+function escapeHtml(value: string) {
+  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return value.replace(/[&<>"']/g, ch => entities[ch] || ch);
+}
 
 export async function GET(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "Unauthorized cron request." }, { status: 401 });
