@@ -29,6 +29,20 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   if (!secret || !planCode || !Number.isSafeInteger(amount) || amount <= 0 || !admin) return NextResponse.json({ error: "Billing is not configured. Add PAYSTACK_SECRET_KEY, the matching Paystack plan code and amount (in kobo), and SUPABASE_SERVICE_ROLE_KEY." }, { status: 503 });
 
+  const { data: currentSubscription, error: subscriptionError } = await admin.from("subscriptions")
+    .select("plan,status,provider,provider_reference")
+    .eq("workspace_id", workspaceId).maybeSingle();
+  if (subscriptionError) return NextResponse.json({ error: "Could not read the current subscription: " + subscriptionError.message }, { status: 500 });
+  if (currentSubscription && ["active","pending","past_due"].includes(currentSubscription.status)) {
+    return NextResponse.json({
+      error: currentSubscription.status === "active"
+        ? "This workspace already has an active subscription. Use Manage / cancel subscription before changing billing."
+        : "A subscription payment is already pending or past due. Complete or manage the existing Paystack subscription before starting another checkout.",
+      current_plan: currentSubscription.plan,
+      current_status: currentSubscription.status
+    }, { status: 409 });
+  }
+
   // Never trust local plan pricing alone. Confirm the recurring plan amount and interval
   // directly with Paystack before redirecting the customer to checkout.
   const planResponse = await fetch("https://api.paystack.co/plan/" + encodeURIComponent(planCode), {
