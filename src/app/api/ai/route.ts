@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const tasks = ["profile_analysis", "outreach_draft", "assistant"] as const;
+const tasks = ["profile_analysis", "outreach_draft", "job_match", "assistant"] as const;
 type Task = typeof tasks[number];
 
 function systemPrompt(task: Task) {
