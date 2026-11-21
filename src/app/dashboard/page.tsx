@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Activity, ArrowUpRight, BrainCircuit, BriefcaseBusiness, FileSearch, LayoutDashboard, Mail, Search, Settings2, ShieldCheck, Users, CreditCard, UserCog, CalendarClock, AtSign } from "lucide-react";
 
 const nav = [
-  ["Overview","/dashboard",LayoutDashboard],["People search","/dashboard/search",Search],["Email finder","/dashboard/email-finder",AtSign],["Contacts","/dashboard/contacts",Users],
+  ["Overview","/dashboard",LayoutDashboard],["People search","/dashboard/search",Search],["Job search","/dashboard/job-search",BriefcaseBusiness],["Email finder","/dashboard/email-finder",AtSign],["Contacts","/dashboard/contacts",Users],
   ["Outreach","/dashboard/outreach",Mail],["Campaigns","/dashboard/campaigns",CalendarClock],["AI assistant","/dashboard/assistant",BrainCircuit],["Jobs & careers","/dashboard/jobs",BriefcaseBusiness],
   ["Team","/dashboard/team",UserCog],["Usage","/dashboard/usage",Activity],["Billing","/dashboard/billing",CreditCard]
 ] as const;
