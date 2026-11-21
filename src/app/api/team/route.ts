@@ -40,15 +40,35 @@ export async function POST(request: Request) {
   if (!["admin", "member", "viewer"].includes(role as string)) return NextResponse.json({ error: "Choose admin, member, or viewer." }, { status: 400 });
   if (ctx.role !== "owner" && role === "admin") return NextResponse.json({ error: "Only the workspace owner can invite administrators." }, { status: 403 });
 
-  const { data: invitation, error: inviteError } = await ctx.admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin}/login`
-  });
-  if (inviteError || !invitation.user) {
-    return NextResponse.json({ error: inviteError?.message || "Invitation could not be created. The email may already have an account or invitation." }, { status: 400 });
+  const { data: existingMember } = await ctx.admin.from("workspace_members").select("user_id").eq("workspace_id", workspaceId).maybeSingle().then(async first => first);
+  // Resolve existing accounts before sending a new invitation so registered users can join
+  // another workspace without creating duplicate accounts.
+  let userId: string | null = null;
+  let page = 1;
+  while (!userId && page <= 20) {
+    const { data, error } = await ctx.admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) return NextResponse.json({ error: "Could not look up the invited account: " + error.message }, { status: 502 });
+    const found = data.users.find(item => item.email?.toLowerCase() === email);
+    if (found) { userId = found.id; break; }
+    if (data.users.length < 1000) break;
+    page++;
   }
-  const { error } = await ctx.admin.from("workspace_members").insert({ workspace_id: workspaceId, user_id: invitation.user.id, role });
+  let invited = false;
+  if (!userId) {
+    const { data: invitation, error } = await ctx.admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin}/login`
+    });
+    if (error || !invitation.user) return NextResponse.json({ error: error?.message || "Invitation could not be created." }, { status: 400 });
+    userId = invitation.user.id;
+    invited = true;
+  }
+
+  const { data: membership } = await ctx.admin.from("workspace_members")
+    .select("user_id").eq("workspace_id", workspaceId).eq("user_id", userId).maybeSingle();
+  if (membership) return NextResponse.json({ error: "This person is already a member of the workspace." }, { status: 409 });
+  const { error } = await ctx.admin.from("workspace_members").insert({ workspace_id: workspaceId, user_id: userId, role });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ invited: true, email, role }, { status: 201 });
+  return NextResponse.json({ invited, added: true, email, role }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
