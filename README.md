@@ -25,7 +25,7 @@ Next.js 14 App Router, React 18, TypeScript, Tailwind CSS, Supabase Auth/Postgre
 1. Install Node.js 20 or newer.
 2. Copy `.env.example` to `.env.local`.
 3. Create a Supabase project and configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY`.
-4. Apply every migration in order: `0001_initial_schema.sql` through `0005_platform_admin.sql`.
+4. Apply every migration in order: `0001_initial_schema.sql` through `0008_rls_policy_tightening.sql`.
 5. Configure the Supabase Auth email provider and redirect URL for your local/deployed app.
 6. Run `npm install`, `npm run typecheck`, and `npm run dev`.
 7. Open `http://localhost:3000`.
@@ -55,7 +55,7 @@ Configure a verified sender with Resend, then set `RESEND_API_KEY`, `EMAIL_FROM`
 
 ### Paystack subscriptions
 
-Create monthly plans in the Paystack Dashboard and configure their plan codes as `PAYSTACK_PLAN_STARTER_CODE`, `PAYSTACK_PLAN_GROWTH_CODE`, and `PAYSTACK_PLAN_BUSINESS_CODE`. Also set the matching `PAYSTACK_STARTER_AMOUNT_KOBO`, `PAYSTACK_GROWTH_AMOUNT_KOBO`, and `PAYSTACK_BUSINESS_AMOUNT_KOBO` values (in kobo; these should match the plan values). Set `PAYSTACK_SECRET_KEY` and `PAYSTACK_WEBHOOK_SECRET`. Register `https://YOUR_DOMAIN/api/billing/webhook` as the Paystack webhook endpoint. Checkout and subscription activation are server-side; browser redirects alone do not activate a plan. Paystack plan billing is recurring according to the interval configured in Paystack.
+Create monthly plans in the Paystack Dashboard and configure their plan codes as `PAYSTACK_PLAN_STARTER_CODE`, `PAYSTACK_PLAN_GROWTH_CODE`, and `PAYSTACK_PLAN_BUSINESS_CODE`. Also set the matching `PAYSTACK_STARTER_AMOUNT_KOBO`, `PAYSTACK_GROWTH_AMOUNT_KOBO`, and `PAYSTACK_BUSINESS_AMOUNT_KOBO` values (in kobo; these should match the plan values). Set `PAYSTACK_SECRET_KEY` for API calls and legacy webhook verification. Set `PAYSTACK_WEBHOOK_SECRET` to the signing secret beginning with `whsec_` for modern `Paystack-Signature` header verification. The modern signature includes a signed timestamp and HMAC SHA-512 over `timestamp.rawBody`; requests outside the 5-minute window are rejected. The deprecated `X-Paystack-Signature` is verified using `PAYSTACK_SECRET_KEY`. Register `https://YOUR_DOMAIN/api/billing/webhook` as the Paystack webhook endpoint. Checkout and subscription activation are server-side; browser redirects alone do not activate a plan. Paystack plan billing is recurring according to the interval configured in Paystack.
 
 ### Platform administrator
 
@@ -64,7 +64,7 @@ After a user has registered, run this in the Supabase SQL editor with that user'
 insert into public.platform_admins(user_id)
 select id from auth.users where email = 'ADMIN_EMAIL';
 ```
-The admin dashboard is available at `/dashboard/admin`. Do not expose the service-role key to the browser.
+The admin dashboard is available at `/dashboard/admin`. Do not expose the service-role key to the browser.\n\nWorkspace admins and members can download a tenant-scoped JSON export of contacts, activity, saved jobs, applications, templates, outreach history, campaigns, usage, and workspace settings from Workspace Settings. Subscription details are included only for owners/admins.
 
 ## Scheduled operations
 
