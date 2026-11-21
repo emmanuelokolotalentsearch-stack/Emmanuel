@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     if (claim.error || !claim.data) return NextResponse.json({ error: "This draft is already being sent or has changed." }, { status: 409 });
 
     const { data: quotaData, error: quotaError } = await ctx.supabase.rpc("consume_feature_usage", {
-      target_workspace: workspaceId, feature_name: "outreach_send", usage_units: 1
+      target_workspace: workspaceId, feature_name: "email_send", usage_units: 1
     });
     if (quotaError) {
       await admin.from("outreach_messages").update({ status: "draft", error: null }).eq("id", draft.id).eq("status", "sending");
