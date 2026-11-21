@@ -8,9 +8,9 @@ AI Workforce Search is a multi-tenant SaaS foundation for professional discovery
 - Multi-tenant workspaces, membership roles, PostgreSQL Row Level Security, and workspace creation.
 - Contact CRM with create/edit/delete, search, CSV import/export, consent fields, and activity logging.
 - Team member invitations, role changes, and removals (Supabase Admin API and service-role key required).
-- Manually saved job records, evidence-based AI job matching, and application-stage tracking. Automated job-board discovery remains provider-dependent.
+- Manually saved job records, evidence-based AI job matching, and application-stage tracking. Job discovery uses a licensed job-feed adapter and remains inactive until provider credentials are supplied.
 - AI assistant, profile analysis, outreach drafting, and evidence-based job matching through a server-side OpenAI API route, with atomic monthly usage quotas.
-- Configurable licensed people-search, email-finder, and email-verification provider adapters. No third-party provider is impersonated and no fake search results are generated.
+- Configurable licensed people-search, job-search, email-finder, and email-verification provider adapters. No third-party provider is impersonated and no fake search results are generated.
 - Outreach templates, saved drafts, scheduled opt-in campaigns, Resend delivery, marketing-consent evidence, signed unsubscribe links, one-click unsubscribe headers, and send-time subscription quota checks.
 - Paystack recurring-plan checkout, webhook signature verification, and server-side subscription state updates.
 - Workspace settings, provider readiness indicators, a per-feature usage and quota dashboard, and a platform-admin metrics/workspace dashboard.
@@ -25,7 +25,7 @@ Next.js 14 App Router, React 18, TypeScript, Tailwind CSS, Supabase Auth/Postgre
 1. Install Node.js 20 or newer.
 2. Copy `.env.example` to `.env.local`.
 3. Create a Supabase project and configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY`.
-4. Apply every migration in order: `0001_initial_schema.sql` through `0012_workspace_usage_read_api.sql`.
+4. Apply every migration in order: `0001_initial_schema.sql` through `0013_job_search_usage.sql`.
 5. Configure the Supabase Auth email provider and redirect URL for your local/deployed app.
 6. Run `npm install`, `npm run typecheck`, and `npm run dev`.
 7. Open `http://localhost:3000`.
@@ -37,7 +37,7 @@ The public landing page can render without Supabase. Authenticated modules requi
 ### AI
 Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL`. The API key is read only by server routes. Monthly per-workspace quotas are enforced atomically in Postgres by `consume_feature_usage` (default limits: 20 free, 200 starter, 1,000 growth, 5,000 business units per feature). Members can see current usage and limits at `/dashboard/usage`.
 
-### People search, email finder, and email verification
+### People search, job search, email finder, and email verification
 
 The application deliberately does not scrape LinkedIn or bypass third-party access controls. Connect a provider only when your organization has the right to use its data and the provider's contract permits your use case.
 
@@ -46,6 +46,12 @@ The server-side people-search adapter sends a POST request to `PEOPLE_SEARCH_API
 { "query": "product designer", "filters": { "title": "", "company": "", "location": "Lagos" }, "limit": 25, "page": 1 }
 ```
 It expects a JSON response containing `results` (or `data.results`) with fields such as `full_name`, `email`, `company`, `job_title`, `location`, `linkedin_url`, and `source`.
+
+The job-search adapter sends a POST request to `JOB_SEARCH_API_URL` with:
+```json
+{ "query": "frontend engineer", "filters": { "location": "Lagos", "employment_type": "Full-time" }, "limit": 25, "page": 1 }
+```
+It expects `results` (or `data.results`) with `title`, `company`, `location`, `employment_type`, `description`, and an HTTP(S) `source_url` / `apply_url` / `url`. Configure `JOB_SEARCH_API_KEY` server-side. Search results are mapped to listings which users can save in the job tracker; applications and stages remain user-controlled.
 
 The email finder route accepts first name, last name, and company domain at `/api/email/find` and expects a JSON response with an email and confidence. The email verification adapter sends `{ "email": "person@example.com" }` and expects `status` or `result`, optionally `score` and `reason`. Configure provider URLs and API keys in server environment variables only; the URLs must use HTTPS.
 
