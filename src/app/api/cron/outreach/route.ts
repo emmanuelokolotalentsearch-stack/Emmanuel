@@ -41,8 +41,8 @@ export async function GET(request: Request) {
           .eq("id", recipient.id).eq("status", recipient.status).select("id").maybeSingle();
         if (!claim.data) continue;
         processed++;
-        const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_unsubscribed_at").eq("id", recipient.contact_id).eq("workspace_id", campaign.workspace_id).maybeSingle();
-        if (!contact?.email || !contact.email_opt_in || contact.email_unsubscribed_at) {
+        const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_opt_in_at,email_consent_source,email_consent_note,email_unsubscribed_at").eq("id", recipient.contact_id).eq("workspace_id", campaign.workspace_id).maybeSingle();
+        if (!contact?.email || !contact.email_opt_in || !contact.email_opt_in_at || !contact.email_consent_source || String(contact.email_consent_note || "").trim().length < 10 || contact.email_unsubscribed_at) {
           await admin.from("outreach_campaign_recipients").update({ status: "skipped", error: "No current email consent or email address.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
           skipped++; continue;
         }
