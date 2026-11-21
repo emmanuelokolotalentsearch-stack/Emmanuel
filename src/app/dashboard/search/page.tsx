@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, Search, UserPlus, MailCheck, ExternalLink } from "lucide-react";
 
@@ -23,7 +23,7 @@ export default function SearchPage() {
 
   useEffect(()=>{fetch("/api/workspaces").then(r=>r.json()).then(d=>{setWorkspaces(d.workspaces||[]);setWorkspaceId(d.workspaces?.[0]?.id||"");if(d.error)setError(d.error);}).catch(()=>setError("Could not load workspace."));},[]);
 
-  async function search(e:React.FormEvent){
+  async function search(e:FormEvent){
     e.preventDefault();setBusy(true);setError("");setPeople([]);setVerification({});setSaved({});
     try{const r=await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,query,title,company,location})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Search failed.");setPeople(d.people||[]);setUsage(d.usage||null);}
     catch(e){setError(e instanceof Error?e.message:"Search failed.");}finally{setBusy(false);}
