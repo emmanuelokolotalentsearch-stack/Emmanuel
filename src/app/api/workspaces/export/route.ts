@@ -14,9 +14,18 @@ export async function GET(request: Request) {
   const tables = ["contacts","activities","jobs","applications","outreach_templates","outreach_messages","outreach_campaigns","outreach_campaign_recipients","usage_events","workspace_settings"] as const;
   const exported: Record<string, unknown> = {};
   for (const table of tables) {
-    const { data, error } = await supabase.from(table).select("*").eq("workspace_id",workspaceId).limit(10000);
-    if (error) return NextResponse.json({ error: "Export failed for " + table + ": " + error.message }, { status: 500 });
-    exported[table] = data || [];
+    const rows: unknown[] = [];
+    const pageSize = 1000;
+    for (let offset = 0; offset < 50000; offset += pageSize) {
+      const { data, error } = await supabase.from(table).select("*")
+        .eq("workspace_id", workspaceId).order("created_at", { ascending: true })
+        .range(offset, offset + pageSize - 1);
+      if (error) return NextResponse.json({ error: "Export failed for " + table + ": " + error.message }, { status: 500 });
+      rows.push(...(data || []));
+      if (!data || data.length < pageSize) break;
+      if (offset + pageSize >= 50000) return NextResponse.json({ error: "Export reached the 50,000-row safety limit for " + table + ". Narrow the export or contact support." }, { status: 413 });
+    }
+    exported[table] = rows;
   }
   if (["owner","admin"].includes(member.role)) {
     const { data, error } = await supabase.from("subscriptions").select("plan,status,provider,customer_email,current_period_end,cancel_at_period_end,updated_at").eq("workspace_id",workspaceId).maybeSingle();
