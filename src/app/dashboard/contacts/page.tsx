@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Plus, Search, Trash2, Upload, Users, X, Building2, RefreshCw } from "lucide-react";
 
@@ -99,7 +99,7 @@ export default function ContactsPage() {
     finally { setBusy(false); }
   }
 
-  async function createWorkspace(e: React.FormEvent) {
+  async function createWorkspace(e: FormEvent) {
     e.preventDefault(); setError(""); setBusy(true);
     try {
       const response = await fetch("/api/workspaces", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: workspaceName }) });
@@ -113,7 +113,7 @@ export default function ContactsPage() {
     finally { setBusy(false); }
   }
 
-  async function saveContact(e: React.FormEvent) {
+  async function saveContact(e: FormEvent) {
     e.preventDefault(); if (!workspaceId) return;
     setError(""); setBusy(true);
     try {
