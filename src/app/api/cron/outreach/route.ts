@@ -37,9 +37,14 @@ export async function GET(request: Request) {
       if (queuedResult.error || staleResult.error) { failed++; continue; }
       const recipients = [...(queuedResult.data || []), ...(staleResult.data || [])].slice(0,25);
       for (const recipient of recipients) {
-        const claim = await admin.from("outreach_campaign_recipients").update({ status: "sending", updated_at: new Date().toISOString() })
-          .eq("id", recipient.id).eq("status", recipient.status).select("id").maybeSingle();
-        if (!claim.data) continue;
+        const { data: liveCampaign } = await admin.from("outreach_campaigns")
+          .select("status").eq("id", campaign.id).maybeSingle();
+        if (!liveCampaign || liveCampaign.status !== "sending") break;
+        let claimQuery = admin.from("outreach_campaign_recipients")
+          .update({ status: "sending", updated_at: new Date().toISOString() })
+          .eq("id", recipient.id).eq("status", recipient.status);
+        if (recipient.status === "sending") claimQuery = claimQuery.lt("updated_at", staleBefore);
+        const claim = await claimQuery.select("id").maybeSingle();        if (!claim.data) continue;
         processed++;
         const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_opt_in_at,email_consent_source,email_consent_note,email_unsubscribed_at").eq("id", recipient.contact_id).eq("workspace_id", campaign.workspace_id).maybeSingle();
         if (!contact?.email || !contact.email_opt_in || !contact.email_opt_in_at || !contact.email_consent_source || String(contact.email_consent_note || "").trim().length < 10 || contact.email_unsubscribed_at) {
