@@ -135,7 +135,7 @@ export default function ContactsPage() {
       full_name: contact.full_name, email: contact.email || "", company: contact.company || "",
       job_title: contact.job_title || "", location: contact.location || "", linkedin_url: contact.linkedin_url || "",
       source: contact.source || "manual", notes: contact.notes || "", stage: contact.stage,
-      email_opt_in: contact.email_opt_in || false
+      email_opt_in: contact.email_opt_in || false, email_consent_note: contact.email_consent_note || ""
     });
     setModal(true);
   }
