@@ -6,7 +6,7 @@ This checklist distinguishes repository code from external services that still n
 
 - [ ] Create a non-production Supabase project for initial validation.
 - [ ] Add the project URL, anon key, and server-only service-role key to local/deployment environment variables.
-- [ ] Apply migrations 0001 through 0010 in lexical order.
+- [ ] Apply migrations 0001 through 0011 in lexical order.
 - [ ] Configure Auth email confirmation, SMTP/email delivery, allowed redirect URLs, and the production site URL.
 - [ ] Register two test users and create two separate workspaces.
 - [ ] Confirm a user cannot read the other workspace's contacts, jobs, applications, activities, campaigns, settings, or usage rows.
@@ -52,7 +52,7 @@ This checklist distinguishes repository code from external services that still n
 - [ ] Confirm drafts remain unsent until a human clicks Send or schedules a campaign.
 - [ ] Confirm no-consent, missing-email, and unsubscribed contacts are blocked/skipped at send time.
 - [ ] Test unsubscribe confirmation and RFC 8058 one-click POST handling.
-- [ ] Confirm send quotas, pauses on quota exhaustion, admin resume, worker retries, and idempotency behavior.
+- [ ] Confirm send quotas, pauses on quota exhaustion, admin resume, worker retries, idempotency behavior, and month-boundary quota reset.
 - [ ] Add APP_BASE_URL and a 32+ character CRON_SECRET to GitHub Actions secrets for the scheduled outreach workflow.
 - [ ] Confirm the scheduled worker runs every five minutes and reports sent, failed, skipped, and quota-blocked counts.
 - [ ] Test delivery failures, provider timeouts, stale sending recovery, cancellation, and campaign completion status.
