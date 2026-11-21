@@ -68,8 +68,14 @@ export async function POST(request: Request) {
     if (!admin) return NextResponse.json({ error: "Secure sending requires SUPABASE_SERVICE_ROLE_KEY." }, { status: 503 });
     const apiKey = process.env.RESEND_API_KEY, from = process.env.EMAIL_FROM;
     if (!apiKey || !from) return NextResponse.json({ error: "Email is not configured. Set RESEND_API_KEY and EMAIL_FROM on the server." }, { status: 503 });
-    const { data: draft } = await admin.from("outreach_messages").select("*").eq("id", body.message_id).eq("workspace_id", workspaceId).maybeSingle();
-    if (!draft || draft.status !== "draft") return NextResponse.json({ error: "Draft not found or it has already been processed." }, { status: 409 });
+    const { data: draft, error: draftError } = await admin.from("outreach_messages").select("*").eq("id", body.message_id).eq("workspace_id", workspaceId).maybeSingle();
+    if (draftError) return NextResponse.json({ error: draftError.message }, { status: 400 });
+    if (!draft) return NextResponse.json({ error: "Draft not found." }, { status: 404 });
+    const previousStatus = draft.status;
+    if (!["draft", "failed", "sending"].includes(previousStatus)) return NextResponse.json({ error: "This message has already been sent or cannot be retried." }, { status: 409 });
+    if (previousStatus === "sending" && new Date(draft.updated_at || 0).getTime() > Date.now() - 15 * 60 * 1000) {
+      return NextResponse.json({ error: "This message is already being sent. Try again after the send lock expires." }, { status: 409 });
+    }
     if (!draft.contact_id) return NextResponse.json({ error: "Draft is not linked to a CRM contact." }, { status: 400 });
     const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_opt_in_at,email_consent_source,email_consent_note,email_unsubscribed_at").eq("id", draft.contact_id).eq("workspace_id", workspaceId).maybeSingle();
     if (!contact || contact.email !== draft.recipient_email) return NextResponse.json({ error: "Contact email changed. Review and create a fresh draft." }, { status: 409 });
@@ -79,19 +85,24 @@ export async function POST(request: Request) {
     catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Unsubscribe signing is not configured." }, { status: 503 }); }
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const unsubscribeUrl = appUrl.replace(/\/$/, "") + "/api/unsubscribe?token=" + encodeURIComponent(unsubscribeToken);
-    const claim = await admin.from("outreach_messages").update({ status: "sending", error: null }).eq("id", draft.id).eq("status", "draft").select("id").maybeSingle();
-    if (claim.error || !claim.data) return NextResponse.json({ error: "This draft is already being sent or has changed." }, { status: 409 });
+    let claimQuery = admin.from("outreach_messages").update({ status: "sending", error: null, updated_at: new Date().toISOString() })
+      .eq("id", draft.id).eq("workspace_id", workspaceId).eq("status", previousStatus);
+    if (previousStatus === "sending") claimQuery = claimQuery.lt("updated_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
+    const claim = await claimQuery.select("id").maybeSingle();
+    if (claim.error || !claim.data) return NextResponse.json({ error: "This message is already being sent or has changed." }, { status: 409 });
 
-    const { data: quotaData, error: quotaError } = await ctx.supabase.rpc("consume_feature_usage", {
-      target_workspace: workspaceId, feature_name: "email_send", usage_units: 1
+    const { data: quotaData, error: quotaError } = await admin.rpc("consume_service_feature_usage", {
+      target_workspace: workspaceId, target_actor: ctx.user.id,
+      feature_name: "email_send", usage_units: 1, request_key: "outreach-message:" + draft.id
     });
-    if (quotaError) {
-      await admin.from("outreach_messages").update({ status: "draft", error: null }).eq("id", draft.id).eq("status", "sending");
-      return NextResponse.json({ error: "Email usage guard unavailable. Apply migration 0009_email_usage_limits.sql.", detail: quotaError.message }, { status: 503 });
-    }
     const quota = Array.isArray(quotaData) ? quotaData[0] : quotaData;
-    if (!quota?.allowed) {
-      await admin.from("outreach_messages").update({ status: "draft", error: null }).eq("id", draft.id).eq("status", "sending");
+    if (quotaError || !quota?.allowed) {
+      await admin.from("outreach_messages").update({
+        status: previousStatus === "sending" ? "failed" : previousStatus,
+        error: quotaError ? "Email usage guard unavailable." : "Monthly email-send limit reached.",
+        updated_at: new Date().toISOString()
+      }).eq("id", draft.id).eq("status", "sending");
+      if (quotaError) return NextResponse.json({ error: "Email usage guard unavailable. Apply migration 0011_month_scoped_email_usage.sql.", detail: quotaError.message }, { status: 503 });
       return NextResponse.json({ error: "This workspace has reached its monthly email-send limit.", used: quota?.used, quota: quota?.quota }, { status: 429 });
     }
 
@@ -109,17 +120,17 @@ export async function POST(request: Request) {
       });
       const result = await resend.json().catch(() => ({}));
       if (!resend.ok) {
-        await admin.from("outreach_messages").update({ status: "failed", error: result?.message || "Email provider rejected the message." }).eq("id", draft.id);
+        await admin.from("outreach_messages").update({ status: "failed", error: result?.message || "Email provider rejected the message.", updated_at: new Date().toISOString() }).eq("id", draft.id);
         return NextResponse.json({ error: result?.message || "Email provider rejected the message." }, { status: 502 });
       }
       const sentAt = new Date().toISOString();
       await Promise.all([
-        admin.from("outreach_messages").update({ status: "sent", provider_id: result.id || null, sent_at: sentAt, error: null }).eq("id", draft.id),
+        admin.from("outreach_messages").update({ status: "sent", provider_id: result.id || null, sent_at: sentAt, error: null, updated_at: sentAt }).eq("id", draft.id),
         admin.from("contacts").update({ last_contacted_at: sentAt, updated_at: sentAt }).eq("id", contact.id)
       ]);
       return NextResponse.json({ sent: true, provider_id: result.id || null, usage: { used: quota.used, quota: quota.quota } });
     } catch (error) {
-      await admin.from("outreach_messages").update({ status: "failed", error: error instanceof Error ? error.message : "Email delivery request failed." }).eq("id", draft.id);
+      await admin.from("outreach_messages").update({ status: "failed", error: error instanceof Error ? error.message : "Email delivery request failed.", updated_at: new Date().toISOString() }).eq("id", draft.id);
       return NextResponse.json({ error: error instanceof Error ? error.message : "Email delivery request failed." }, { status: 502 });
     }
   }
