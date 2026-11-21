@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Activity, RefreshCw, Sparkles, Search, AtSign, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Activity, RefreshCw, Sparkles, Search, AtSign, Mail, ShieldCheck, BriefcaseBusiness } from "lucide-react";
 
 type Workspace={id:string;name:string;role:string};
 type Feature={feature:string;used:number;quota:number;remaining:number};
 type Usage={plan:string;month_start:string;features:Feature[]};
 
 const labels:Record<string,{label:string;description:string;icon:any}> = {
- people_search:{label:"People search",description:"Licensed professional search requests",icon:Search},
+ people_search:{label:"People search",description:"Licensed professional search requests",icon:Search},\n job_search:{label:"Job search",description:"Licensed job-feed search requests",icon:BriefcaseBusiness},
  email_find:{label:"Email finder",description:"Business email discovery requests",icon:AtSign},
  email_verify:{label:"Email verification",description:"Email verification lookups",icon:ShieldCheck},
  ai_assistant:{label:"AI assistant",description:"General assistant prompts",icon:Sparkles},
