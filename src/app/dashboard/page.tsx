@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Activity, ArrowUpRight, BrainCircuit, BriefcaseBusiness, FileSearch, LayoutDashboard, Mail, Search, Settings2, ShieldCheck, Users, CreditCard, UserCog } from "lucide-react";
+import { Activity, ArrowUpRight, BrainCircuit, BriefcaseBusiness, FileSearch, LayoutDashboard, Mail, Search, Settings2, ShieldCheck, Users, CreditCard, UserCog, CalendarClock, AtSign } from "lucide-react";
 
 const nav = [
-  ["Overview","/dashboard",LayoutDashboard],["People search","/dashboard/search",Search],["Contacts","/dashboard/contacts",Users],
-  ["Outreach","/dashboard/outreach",Mail],["AI assistant","/dashboard/assistant",BrainCircuit],["Jobs & careers","/dashboard/jobs",BriefcaseBusiness],
+  ["Overview","/dashboard",LayoutDashboard],["People search","/dashboard/search",Search],["Email finder","/dashboard/email-finder",AtSign],["Contacts","/dashboard/contacts",Users],
+  ["Outreach","/dashboard/outreach",Mail],["Campaigns","/dashboard/campaigns",CalendarClock],["AI assistant","/dashboard/assistant",BrainCircuit],["Jobs & careers","/dashboard/jobs",BriefcaseBusiness],
   ["Team","/dashboard/team",UserCog],["Billing","/dashboard/billing",CreditCard]
 ] as const;
 
@@ -63,7 +63,7 @@ export default async function Dashboard() {
           <section className="card p-6"><div className="flex items-center justify-between"><div><h3 className="font-extrabold">Recent activity</h3><p className="mt-1 text-xs text-slate-400">Latest workspace updates</p></div><Activity size={18} className="text-slate-400"/></div>
             {recent.length ? <div className="mt-5 space-y-4">{recent.map(item=><div key={item.id} className="flex gap-3"><span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-violet-500"/><div><p className="text-xs font-semibold text-slate-700">{item.summary}</p><p className="mt-1 text-[10px] capitalize text-slate-400">{item.kind} · {new Date(item.created_at).toLocaleString()}</p></div></div>)}</div> : <div className="flex min-h-40 flex-col items-center justify-center text-center"><FileSearch size={25} className="text-slate-300"/><p className="mt-3 text-sm font-bold">No activity to show yet</p><p className="mt-1 text-xs text-slate-400">Your CRM and workspace updates will appear here.</p></div>}
           </section>
-          <section className="card p-6"><h3 className="font-extrabold">Quick actions</h3><div className="mt-5 space-y-3">{[["Search professionals","Discover professionals from licensed sources","/dashboard/search",Search],["Manage contacts","Review saved relationships","/dashboard/contacts",Users],["Prepare outreach","Write messages and review drafts","/dashboard/outreach",Mail],["Configure integrations","Connect trusted providers","/dashboard/settings",Settings2]].map(([title,desc,href,Icon]:any)=><Link key={title} href={href} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 hover:bg-violet-50"><Icon size={18} className="text-violet-700"/><span className="flex-1"><span className="block text-xs font-extrabold">{title}</span><span className="text-[11px] text-slate-400">{desc}</span></span><ArrowUpRight size={15}/></Link>)}</div></section>
+          <section className="card p-6"><h3 className="font-extrabold">Quick actions</h3><div className="mt-5 space-y-3">{[["Search professionals","Discover professionals from licensed sources","/dashboard/search",Search],["Find a business email","Use your licensed email-finder provider","/dashboard/email-finder",AtSign],["Manage contacts","Review saved relationships","/dashboard/contacts",Users],["Prepare outreach","Write messages and review drafts","/dashboard/outreach",Mail],["Schedule campaigns","Prepare opt-in campaign follow-ups","/dashboard/campaigns",CalendarClock],["Configure integrations","Connect trusted providers","/dashboard/settings",Settings2]].map(([title,desc,href,Icon]:any)=><Link key={title} href={href} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 hover:bg-violet-50"><Icon size={18} className="text-violet-700"/><span className="flex-1"><span className="block text-xs font-extrabold">{title}</span><span className="text-[11px] text-slate-400">{desc}</span></span><ArrowUpRight size={15}/></Link>)}</div></section>
         </div>
       </div>
     </main>
