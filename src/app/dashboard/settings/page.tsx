@@ -1,0 +1,31 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, CheckCircle2, CircleAlert, KeyRound, Save, Users, CreditCard } from "lucide-react";
+
+type Workspace={id:string;name:string;role:string};
+type Settings={company_website:string;timezone:string;default_email_signature:string;default_outreach_tone:string};
+const empty:Settings={company_website:"",timezone:"Africa/Lagos",default_email_signature:"",default_outreach_tone:"professional"};
+
+export default function SettingsPage(){
+ const [workspaces,setWorkspaces]=useState<Workspace[]>([]);const [workspaceId,setWorkspaceId]=useState("");const [settings,setSettings]=useState<Settings>(empty);const [integrations,setIntegrations]=useState<Record<string,boolean>>({});const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [saved,setSaved]=useState(false);
+ async function load(id:string){const r=await fetch("/api/settings?workspace_id="+encodeURIComponent(id));const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load settings.");setSettings({...empty,...d.settings});setIntegrations(d.integrations||{});}
+ useEffect(()=>{(async()=>{try{const r=await fetch("/api/workspaces"),d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load workspace.");setWorkspaces(d.workspaces||[]);const id=d.workspaces?.[0]?.id||"";setWorkspaceId(id);if(id)await load(id);}catch(e){setError(e instanceof Error?e.message:"Settings unavailable.");}})();},[]);
+ async function save(e:React.FormEvent){e.preventDefault();setBusy(true);setError("");setSaved(false);try{const r=await fetch("/api/settings",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,settings})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Save failed.");setSaved(true);}catch(e){setError(e instanceof Error?e.message:"Save failed.");}finally{setBusy(false);}}
+ const labels:Record<string,string>={supabase:"Supabase database and admin key",ai:"OpenAI AI services",peopleSearch:"Licensed people search",emailVerification:"Email verification",emailDelivery:"Resend email delivery and unsubscribe",paystack:"Paystack subscriptions"};
+ return <main className="min-h-screen px-5 py-8 sm:px-8"><div className="mx-auto max-w-5xl"><Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500"><ArrowLeft size={16}/> Dashboard</Link>
+ <div className="mt-6 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-extrabold uppercase tracking-widest text-violet-600">Configuration</p><h1 className="mt-2 text-3xl font-black">Workspace settings</h1><p className="mt-2 text-sm text-slate-500">Manage workspace preferences and check provider readiness.</p></div>{workspaces.length>0&&<select className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm" value={workspaceId} onChange={e=>{setWorkspaceId(e.target.value);load(e.target.value).catch(err=>setError(err.message));}}>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select>}</div>
+ {error&&<div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+ <form onSubmit={save} className="card mt-6 space-y-4 p-6"><h2 className="font-extrabold">Workspace preferences</h2>
+ <label className="block text-xs font-bold text-slate-600">Company website<input type="url" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal" value={settings.company_website} onChange={e=>setSettings({...settings,company_website:e.target.value})}/></label>
+ <label className="block text-xs font-bold text-slate-600">Timezone<input className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal" value={settings.timezone} onChange={e=>setSettings({...settings,timezone:e.target.value})}/></label>
+ <label className="block text-xs font-bold text-slate-600">Default outreach tone<select className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-normal" value={settings.default_outreach_tone} onChange={e=>setSettings({...settings,default_outreach_tone:e.target.value})}><option value="professional">Professional</option><option value="friendly">Friendly</option><option value="concise">Concise</option></select></label>
+ <label className="block text-xs font-bold text-slate-600">Default email signature<textarea rows={3} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal" value={settings.default_email_signature} onChange={e=>setSettings({...settings,default_email_signature:e.target.value})}/></label>
+ <div className="flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-slate-400">{saved?"Settings saved.":"Only workspace admins can save changes."}</span><button disabled={busy||!workspaceId} className="btn"><Save size={15}/>{busy?"Saving…":"Save settings"}</button></div></form>
+ <section className="card mt-5 p-6"><div className="flex items-center gap-2"><KeyRound size={18} className="text-violet-700"/><h2 className="font-extrabold">Integration readiness</h2></div><p className="mt-2 text-xs leading-5 text-slate-500">Provider secrets are server environment variables and are never entered or displayed in this browser. Add them in your hosting provider's environment settings.</p>
+ <div className="mt-4 grid gap-3 sm:grid-cols-2">{Object.entries(labels).map(([key,label])=><div key={key} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3">{integrations[key]?<CheckCircle2 className="text-emerald-600" size={18}/>:<CircleAlert className="text-amber-600" size={18}/>}<span className="flex-1 text-xs font-bold text-slate-700">{label}</span><span className={"text-[10px] font-extrabold "+(integrations[key]?"text-emerald-700":"text-amber-700")}>{integrations[key]?"Ready":"Needs setup"}</span></div>)}</div>
+ </section>
+ <div className="mt-5 grid gap-3 sm:grid-cols-2"><Link href="/dashboard/team" className="card flex items-center gap-3 p-4 text-sm font-bold"><Users className="text-violet-700"/> Manage team</Link><Link href="/dashboard/billing" className="card flex items-center gap-3 p-4 text-sm font-bold"><CreditCard className="text-violet-700"/> Billing and plans</Link></div>
+ </div></main>;
+}
