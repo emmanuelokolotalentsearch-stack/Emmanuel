@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, UserPlus, Users, RefreshCw, Trash2 } from "lucide-react";
 
@@ -45,7 +45,7 @@ export default function TeamPage() {
     return () => { active = false; };
   }, [load]);
 
-  async function invite(e: React.FormEvent) {
+  async function invite(e: FormEvent) {
     e.preventDefault(); setBusy(true); setError("");
     try {
       const r = await fetch("/api/team", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspace_id: workspaceId, email, role }) });
