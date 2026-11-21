@@ -134,7 +134,6 @@ export async function POST(request: Request) {
         // has several pending workspaces on the same plan.
         if (matches?.length === 1) {
           const { error: updateError } = await admin.from("subscriptions").update({
-            status: "active",
             provider: "paystack",
             provider_subscription_code: code,
             provider_customer_code: data.customer?.customer_code || null,
@@ -162,7 +161,7 @@ export async function POST(request: Request) {
         const { data: current, error: lookupError } = await admin.from("subscriptions")
           .select("workspace_id,plan").eq("provider_subscription_code", code).maybeSingle();
         if (lookupError) throw lookupError;
-        if (current && (!data.amount || chargeMatchesPlan(current, data))) {
+        if (current && ((data.amount === undefined || data.amount === null) || chargeMatchesPlan(current, data))) {
           const patch: Record<string, unknown> = { status: "active", updated_at: now };
           const nextDate = data.subscription?.next_payment_date || data.next_payment_date;
           if (nextDate) patch.current_period_end = nextDate;
