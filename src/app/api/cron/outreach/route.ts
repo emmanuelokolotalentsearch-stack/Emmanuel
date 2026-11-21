@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const { data: campaigns, error } = await admin.from("outreach_campaigns").select("*")
       .in("status", ["scheduled","sending"]).lte("scheduled_for", now).order("scheduled_for").limit(10);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    let sent = 0, failed = 0, skipped = 0, processed = 0;
+    let sent = 0, failed = 0, skipped = 0, processed = 0, quotaBlocked = false;
     for (const campaign of campaigns || []) {
       if (campaign.status === "scheduled") {
         const claim = await admin.from("outreach_campaigns").update({ status: "sending", updated_at: now }).eq("id", campaign.id).eq("status", "scheduled").select("id").maybeSingle();
@@ -45,6 +45,19 @@ export async function GET(request: Request) {
         if (!contact?.email || !contact.email_opt_in || contact.email_unsubscribed_at) {
           await admin.from("outreach_campaign_recipients").update({ status: "skipped", error: "No current email consent or email address.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
           skipped++; continue;
+        }
+        const { data: quotaData, error: quotaError } = await admin.rpc("consume_service_feature_usage", {
+          target_workspace: campaign.workspace_id, target_actor: campaign.created_by, feature_name: "campaign_send", usage_units: 1
+        });
+        if (quotaError) {
+          await admin.from("outreach_campaign_recipients").update({ status: "queued", error: "Usage guard unavailable; retry after migration 0009 is applied.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
+          throw new Error("Scheduled email quota check failed: " + quotaError.message);
+        }
+        const quota = Array.isArray(quotaData) ? quotaData[0] : quotaData;
+        if (!quota?.allowed) {
+          await admin.from("outreach_campaign_recipients").update({ status: "queued", error: "Monthly campaign-send quota reached.", updated_at: new Date().toISOString() }).eq("id", recipient.id);
+          await admin.from("outreach_campaigns").update({ status: "paused", updated_at: new Date().toISOString() }).eq("id", campaign.id);
+          quotaBlocked = true; skipped++; break;
         }
         let token: string;
         try { token = createUnsubscribeToken(campaign.workspace_id, contact.id); }
@@ -85,10 +98,11 @@ export async function GET(request: Request) {
           failed++;
         }
       }
+      if (quotaBlocked) break;
       const { count } = await admin.from("outreach_campaign_recipients").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id).in("status", ["queued","sending"]);
       if (!count) await admin.from("outreach_campaigns").update({ status: "sent", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", campaign.id).eq("status", "sending");
     }
-    return NextResponse.json({ processed, sent, failed, skipped, campaigns_checked: campaigns?.length || 0 });
+    return NextResponse.json({ processed, sent, failed, skipped, quota_blocked: quotaBlocked, campaigns_checked: campaigns?.length || 0 });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Scheduled delivery failed." }, { status: 500 });
   }
