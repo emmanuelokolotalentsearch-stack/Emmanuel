@@ -5,6 +5,7 @@ const status = () => ({
   supabase: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY),
   ai: Boolean(process.env.OPENAI_API_KEY),
   peopleSearch: Boolean(process.env.PEOPLE_SEARCH_API_URL && process.env.PEOPLE_SEARCH_API_KEY),
+  emailFinder: Boolean(process.env.PEOPLE_EMAIL_FINDER_API_URL && process.env.PEOPLE_EMAIL_FINDER_API_KEY),
   emailVerification: Boolean(process.env.EMAIL_VERIFICATION_API_URL && process.env.EMAIL_VERIFICATION_API_KEY),
   emailDelivery: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.UNSUBSCRIBE_SECRET),
   paystack: Boolean(process.env.PAYSTACK_SECRET_KEY && process.env.PAYSTACK_PLAN_STARTER_CODE && process.env.PAYSTACK_PLAN_GROWTH_CODE && process.env.PAYSTACK_PLAN_BUSINESS_CODE)
