@@ -24,8 +24,10 @@ export async function POST(request: Request) {
 
   const secret = process.env.PAYSTACK_SECRET_KEY;
   const planCode = process.env[planEnv[plan]];
+  const amountKey = "PAYSTACK_" + plan.toUpperCase() + "_AMOUNT_KOBO";
+  const amount = Number(process.env[amountKey] || "");
   const admin = createAdminClient();
-  if (!secret || !planCode || !admin) return NextResponse.json({ error: "Billing is not configured. Add PAYSTACK_SECRET_KEY, the matching Paystack plan code, and SUPABASE_SERVICE_ROLE_KEY." }, { status: 503 });
+  if (!secret || !planCode || !Number.isSafeInteger(amount) || amount <= 0 || !admin) return NextResponse.json({ error: "Billing is not configured. Add PAYSTACK_SECRET_KEY, the matching Paystack plan code and amount (in kobo), and SUPABASE_SERVICE_ROLE_KEY." }, { status: 503 });
 
   const reference = "aws_" + randomUUID().replace(/-/g, "");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
     method: "POST",
     headers: { Authorization: "Bearer " + secret, "Content-Type": "application/json" },
     body: JSON.stringify({
-      email: user.email, plan: planCode, reference, currency: "NGN",
+      email: user.email, plan: planCode, amount: String(amount), reference, currency: "NGN",
       callback_url: appUrl.replace(/\/$/, "") + "/dashboard/billing?workspace_id=" + encodeURIComponent(workspaceId),
       metadata: { workspace_id: workspaceId, plan, user_id: user.id, integration: "ai-workforce-search" }
     }),
