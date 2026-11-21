@@ -29,6 +29,22 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   if (!secret || !planCode || !Number.isSafeInteger(amount) || amount <= 0 || !admin) return NextResponse.json({ error: "Billing is not configured. Add PAYSTACK_SECRET_KEY, the matching Paystack plan code and amount (in kobo), and SUPABASE_SERVICE_ROLE_KEY." }, { status: 503 });
 
+  // Never trust local plan pricing alone. Confirm the recurring plan amount and interval
+  // directly with Paystack before redirecting the customer to checkout.
+  const planResponse = await fetch("https://api.paystack.co/plan/" + encodeURIComponent(planCode), {
+    headers: { Authorization: "Bearer " + secret },
+    signal: AbortSignal.timeout(20000),
+    redirect: "error"
+  });
+  const planResult = await planResponse.json().catch(() => ({}));
+  const livePlan = planResult?.data;
+  if (!planResponse.ok || !planResult.status || !livePlan) {
+    return NextResponse.json({ error: planResult.message || "Could not validate the Paystack plan configuration." }, { status: 502 });
+  }
+  if (Number(livePlan.amount) !== amount || String(livePlan.interval).toLowerCase() !== "monthly" || String(livePlan.currency).toUpperCase() !== "NGN") {
+    return NextResponse.json({ error: "The selected Paystack plan does not match the configured monthly NGN amount. Check its amount, currency, and interval in Paystack." }, { status: 409 });
+  }
+
   const reference = "aws_" + randomUUID().replace(/-/g, "");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const init = await fetch("https://api.paystack.co/transaction/initialize", {
