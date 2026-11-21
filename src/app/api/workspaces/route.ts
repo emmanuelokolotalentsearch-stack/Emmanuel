@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
   const supabase = await createClient();
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   const workspaceId = data as string;
   await supabase.from("workspace_settings").upsert({ workspace_id: workspaceId, settings: {} });
-  await supabase.from("subscriptions").upsert({ workspace_id: workspaceId, plan: "free", status: "free" });
+  const admin = createAdminClient();
+  if (admin) await admin.from("subscriptions").upsert({ workspace_id: workspaceId, plan: "free", status: "free" }, { onConflict: "workspace_id" });
   return NextResponse.json({ workspace: { id: workspaceId, name, slug }, message: "Workspace created." }, { status: 201 });
 }
