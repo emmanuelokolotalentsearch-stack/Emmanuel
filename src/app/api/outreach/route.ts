@@ -13,7 +13,10 @@ async function context(workspaceId: string) {
   if (!member || !["owner", "admin", "member"].includes(member.role)) return { error: NextResponse.json({ error: "Workspace editor access required." }, { status: 403 }) } as const;
   return { supabase, user, role: member.role } as const;
 }
-function escapeHtml(value: string) { return value.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]!)); }
+function escapeHtml(value: string) {
+  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return value.replace(/[&<>"']/g, ch => entities[ch] || ch);
+}
 
 export async function GET(request: Request) {
   const workspaceId = new URL(request.url).searchParams.get("workspace_id") || "";
