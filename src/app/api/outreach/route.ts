@@ -71,12 +71,6 @@ export async function POST(request: Request) {
     const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_unsubscribed_at").eq("id", draft.contact_id).eq("workspace_id", workspaceId).maybeSingle();
     if (!contact || contact.email !== draft.recipient_email) return NextResponse.json({ error: "Contact email changed. Review and create a fresh draft." }, { status: 409 });
     if (!contact.email_opt_in || contact.email_unsubscribed_at) return NextResponse.json({ error: "This contact has not consented to marketing email or has unsubscribed. Sending is blocked." }, { status: 403 });
-    const { data: quotaData, error: quotaError } = await ctx.supabase.rpc("consume_feature_usage", {
-      target_workspace: workspaceId, feature_name: "outreach_send", usage_units: 1
-    });
-    if (quotaError) return NextResponse.json({ error: "Email usage guard unavailable. Apply migration 0009_email_usage_limits.sql.", detail: quotaError.message }, { status: 503 });
-    const quota = Array.isArray(quotaData) ? quotaData[0] : quotaData;
-    if (!quota?.allowed) return NextResponse.json({ error: "This workspace has reached its monthly email-send limit.", used: quota?.used, quota: quota?.quota }, { status: 429 });
     let unsubscribeToken: string;
     try { unsubscribeToken = createUnsubscribeToken(workspaceId, contact.id); }
     catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Unsubscribe signing is not configured." }, { status: 503 }); }
@@ -84,6 +78,19 @@ export async function POST(request: Request) {
     const unsubscribeUrl = appUrl.replace(/\/$/, "") + "/api/unsubscribe?token=" + encodeURIComponent(unsubscribeToken);
     const claim = await admin.from("outreach_messages").update({ status: "sending", error: null }).eq("id", draft.id).eq("status", "draft").select("id").maybeSingle();
     if (claim.error || !claim.data) return NextResponse.json({ error: "This draft is already being sent or has changed." }, { status: 409 });
+
+    const { data: quotaData, error: quotaError } = await ctx.supabase.rpc("consume_feature_usage", {
+      target_workspace: workspaceId, feature_name: "outreach_send", usage_units: 1
+    });
+    if (quotaError) {
+      await admin.from("outreach_messages").update({ status: "draft", error: null }).eq("id", draft.id).eq("status", "sending");
+      return NextResponse.json({ error: "Email usage guard unavailable. Apply migration 0009_email_usage_limits.sql.", detail: quotaError.message }, { status: 503 });
+    }
+    const quota = Array.isArray(quotaData) ? quotaData[0] : quotaData;
+    if (!quota?.allowed) {
+      await admin.from("outreach_messages").update({ status: "draft", error: null }).eq("id", draft.id).eq("status", "sending");
+      return NextResponse.json({ error: "This workspace has reached its monthly email-send limit.", used: quota?.used, quota: quota?.quota }, { status: 429 });
+    }
 
     const bodyText = draft.body + "\n\nTo stop receiving these emails, unsubscribe here: " + unsubscribeUrl;
     try {
