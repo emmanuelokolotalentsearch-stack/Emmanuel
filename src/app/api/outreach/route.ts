@@ -65,44 +65,53 @@ export async function POST(request: Request) {
     if (!admin) return NextResponse.json({ error: "Secure sending requires SUPABASE_SERVICE_ROLE_KEY." }, { status: 503 });
     const apiKey = process.env.RESEND_API_KEY, from = process.env.EMAIL_FROM;
     if (!apiKey || !from) return NextResponse.json({ error: "Email is not configured. Set RESEND_API_KEY and EMAIL_FROM on the server." }, { status: 503 });
-    let unsubscribeToken: string;
-    try { unsubscribeToken = createUnsubscribeToken(workspaceId, body.contact_id || ""); }
-    catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Unsubscribe signing is not configured." }, { status: 503 }); }
-
     const { data: draft } = await admin.from("outreach_messages").select("*").eq("id", body.message_id).eq("workspace_id", workspaceId).maybeSingle();
     if (!draft || draft.status !== "draft") return NextResponse.json({ error: "Draft not found or it has already been processed." }, { status: 409 });
     if (!draft.contact_id) return NextResponse.json({ error: "Draft is not linked to a CRM contact." }, { status: 400 });
     const { data: contact } = await admin.from("contacts").select("id,email,email_opt_in,email_unsubscribed_at").eq("id", draft.contact_id).eq("workspace_id", workspaceId).maybeSingle();
     if (!contact || contact.email !== draft.recipient_email) return NextResponse.json({ error: "Contact email changed. Review and create a fresh draft." }, { status: 409 });
     if (!contact.email_opt_in || contact.email_unsubscribed_at) return NextResponse.json({ error: "This contact has not consented to marketing email or has unsubscribed. Sending is blocked." }, { status: 403 });
-    unsubscribeToken = createUnsubscribeToken(workspaceId, contact.id);
+    const { data: quotaData, error: quotaError } = await ctx.supabase.rpc("consume_feature_usage", {
+      target_workspace: workspaceId, feature_name: "outreach_send", usage_units: 1
+    });
+    if (quotaError) return NextResponse.json({ error: "Email usage guard unavailable. Apply migration 0009_email_usage_limits.sql.", detail: quotaError.message }, { status: 503 });
+    const quota = Array.isArray(quotaData) ? quotaData[0] : quotaData;
+    if (!quota?.allowed) return NextResponse.json({ error: "This workspace has reached its monthly email-send limit.", used: quota?.used, quota: quota?.quota }, { status: 429 });
+    let unsubscribeToken: string;
+    try { unsubscribeToken = createUnsubscribeToken(workspaceId, contact.id); }
+    catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Unsubscribe signing is not configured." }, { status: 503 }); }
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const unsubscribeUrl = appUrl.replace(/\/$/, "") + "/api/unsubscribe?token=" + encodeURIComponent(unsubscribeToken);
     const claim = await admin.from("outreach_messages").update({ status: "sending", error: null }).eq("id", draft.id).eq("status", "draft").select("id").maybeSingle();
     if (claim.error || !claim.data) return NextResponse.json({ error: "This draft is already being sent or has changed." }, { status: 409 });
 
     const bodyText = draft.body + "\n\nTo stop receiving these emails, unsubscribe here: " + unsubscribeUrl;
-    const resend = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from, to: [draft.recipient_email], subject: draft.subject, text: bodyText,
-        html: "<div style=\"font-family:Arial,sans-serif;white-space:pre-wrap\">" + escapeHtml(draft.body) + "</div><p style=\"font-size:12px;color:#666\"><a href=\"" + escapeHtml(unsubscribeUrl) + "\">Unsubscribe</a></p>",
-        headers: { "List-Unsubscribe": "<" + unsubscribeUrl + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
-      }),
-      signal: AbortSignal.timeout(30000)
-    });
-    const result = await resend.json().catch(() => ({}));
-    if (!resend.ok) {
-      await admin.from("outreach_messages").update({ status: "failed", error: result?.message || "Email provider rejected the message." }).eq("id", draft.id);
-      return NextResponse.json({ error: result?.message || "Email provider rejected the message." }, { status: 502 });
+    try {
+      const resend = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from, to: [draft.recipient_email], subject: draft.subject, text: bodyText,
+          html: "<div style=\\"font-family:Arial,sans-serif;white-space:pre-wrap\\">" + escapeHtml(draft.body) + "</div><p style=\\"font-size:12px;color:#666\\"><a href=\\"" + escapeHtml(unsubscribeUrl) + "\\">Unsubscribe</a></p>",
+          headers: { "List-Unsubscribe": "<" + unsubscribeUrl + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+        }),
+        signal: AbortSignal.timeout(30000)
+      });
+      const result = await resend.json().catch(() => ({}));
+      if (!resend.ok) {
+        await admin.from("outreach_messages").update({ status: "failed", error: result?.message || "Email provider rejected the message." }).eq("id", draft.id);
+        return NextResponse.json({ error: result?.message || "Email provider rejected the message." }, { status: 502 });
+      }
+      const sentAt = new Date().toISOString();
+      await Promise.all([
+        admin.from("outreach_messages").update({ status: "sent", provider_id: result.id || null, sent_at: sentAt, error: null }).eq("id", draft.id),
+        admin.from("contacts").update({ last_contacted_at: sentAt, updated_at: sentAt }).eq("id", contact.id)
+      ]);
+      return NextResponse.json({ sent: true, provider_id: result.id || null, usage: { used: quota.used, quota: quota.quota } });
+    } catch (error) {
+      await admin.from("outreach_messages").update({ status: "failed", error: error instanceof Error ? error.message : "Email delivery request failed." }).eq("id", draft.id);
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Email delivery request failed." }, { status: 502 });
     }
-    const sentAt = new Date().toISOString();
-    await Promise.all([
-      admin.from("outreach_messages").update({ status: "sent", provider_id: result.id || null, sent_at: sentAt, error: null }).eq("id", draft.id),
-      admin.from("contacts").update({ last_contacted_at: sentAt, updated_at: sentAt }).eq("id", contact.id)
-    ]);
-    return NextResponse.json({ sent: true, provider_id: result.id || null });
   }
 
   return NextResponse.json({ error: "Unsupported outreach action." }, { status: 400 });
