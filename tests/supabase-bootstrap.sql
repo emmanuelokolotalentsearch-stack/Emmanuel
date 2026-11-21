@@ -38,3 +38,13 @@ $$;
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION auth.uid() TO PUBLIC;
 GRANT EXECUTE ON FUNCTION auth.role() TO PUBLIC;
+
+-- Supabase grants required for PostgREST roles and RLS-backed table access.
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO authenticated, service_role;
