@@ -25,7 +25,7 @@ Next.js 14 App Router, React 18, TypeScript, Tailwind CSS, Supabase Auth/Postgre
 1. Install Node.js 20 or newer.
 2. Copy `.env.example` to `.env.local`.
 3. Create a Supabase project and configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY`.
-4. Apply every migration in order: `0001_initial_schema.sql` through `0010_idempotent_usage.sql`.
+4. Apply every migration in order: `0001_initial_schema.sql` through `0011_month_scoped_email_usage.sql`.
 5. Configure the Supabase Auth email provider and redirect URL for your local/deployed app.
 6. Run `npm install`, `npm run typecheck`, and `npm run dev`.
 7. Open `http://localhost:3000`.
@@ -51,7 +51,7 @@ The email finder route accepts first name, last name, and company domain at `/ap
 
 ### Email sending
 
-Configure a verified sender with Resend, then set `RESEND_API_KEY`, `EMAIL_FROM`, and a random `UNSUBSCRIBE_SECRET` of at least 32 characters. The CRM defaults email marketing consent to false. Turning it on requires a consent-evidence note; sending is blocked unless consent is recorded and the contact has not unsubscribed. Drafts are human-reviewed; CSV import and saving a profile never imply consent. Direct and scheduled delivery use atomic monthly plan quotas. The current default email quota is 20 free, 200 starter, 1,000 growth, or 5,000 business sends per workspace per month. Scheduled email attempts use idempotent usage keys so worker retries do not double-charge quota.
+Configure a verified sender with Resend, then set `RESEND_API_KEY`, `EMAIL_FROM`, and a random `UNSUBSCRIBE_SECRET` of at least 32 characters. The CRM defaults email marketing consent to false. Turning it on requires a consent-evidence note; sending is blocked unless consent is recorded and the contact has not unsubscribed. Drafts are human-reviewed; CSV import and saving a profile never imply consent. Direct and scheduled delivery use atomic monthly plan quotas. Direct and scheduled sends share one email quota: 20 free, 200 starter, 1,000 growth, or 5,000 business sends per workspace per month. Campaign retry keys are month-scoped so legitimate next-month deliveries consume the new billing month's quota. Scheduled email attempts use idempotent usage keys so worker retries do not double-charge quota.
 
 ### Jobs and applications\n\nJobs can be added from a user-provided or otherwise authorized listing. Automated job-board discovery is not enabled until a licensed feed is connected. The AI job-matching tool compares only user-supplied job requirements and candidate evidence, identifies evidence gaps, and suggests structured interview questions; it does not rank candidates or make hiring decisions.\n\n### Paystack subscriptions
 
