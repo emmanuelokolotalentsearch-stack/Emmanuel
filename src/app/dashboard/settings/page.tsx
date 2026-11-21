@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, CircleAlert, KeyRound, Save, Users, CreditCard } from "lucide-react";
+import { ArrowLeft, CheckCircle2, CircleAlert, KeyRound, Save, Users, CreditCard, Download } from "lucide-react";
 
 type Workspace={id:string;name:string;role:string};
 type Settings={company_website:string;timezone:string;default_email_signature:string;default_outreach_tone:string};
@@ -26,6 +26,6 @@ export default function SettingsPage(){
  <section className="card mt-5 p-6"><div className="flex items-center gap-2"><KeyRound size={18} className="text-violet-700"/><h2 className="font-extrabold">Integration readiness</h2></div><p className="mt-2 text-xs leading-5 text-slate-500">Provider secrets are server environment variables and are never entered or displayed in this browser. Add them in your hosting provider's environment settings.</p>
  <div className="mt-4 grid gap-3 sm:grid-cols-2">{Object.entries(labels).map(([key,label])=><div key={key} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3">{integrations[key]?<CheckCircle2 className="text-emerald-600" size={18}/>:<CircleAlert className="text-amber-600" size={18}/>}<span className="flex-1 text-xs font-bold text-slate-700">{label}</span><span className={"text-[10px] font-extrabold "+(integrations[key]?"text-emerald-700":"text-amber-700")}>{integrations[key]?"Ready":"Needs setup"}</span></div>)}</div>
  </section>
- <div className="mt-5 grid gap-3 sm:grid-cols-2"><Link href="/dashboard/team" className="card flex items-center gap-3 p-4 text-sm font-bold"><Users className="text-violet-700"/> Manage team</Link><Link href="/dashboard/billing" className="card flex items-center gap-3 p-4 text-sm font-bold"><CreditCard className="text-violet-700"/> Billing and plans</Link></div>
+ <div className="mt-5 grid gap-3 sm:grid-cols-3"><Link href="/dashboard/team" className="card flex items-center gap-3 p-4 text-sm font-bold"><Users className="text-violet-700"/> Manage team</Link><Link href="/dashboard/billing" className="card flex items-center gap-3 p-4 text-sm font-bold"><CreditCard className="text-violet-700"/> Billing and plans</Link><a href={"/api/workspaces/export?workspace_id="+encodeURIComponent(workspaceId)} className="card flex items-center gap-3 p-4 text-sm font-bold"><Download className="text-violet-700"/> Export workspace data</a></div>
  </div></main>;
 }
